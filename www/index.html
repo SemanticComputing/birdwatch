@@ -219,11 +219,11 @@
 		var speciesEn = [];
 		var speciesFi = [];
 		
-
-
-	
+		var d = new Date();
+		var year = d.getFullYear();
+		var month = (d.getMonth() + 1);
+		var date = d.getDate();
 		
-
 
 
 	$('#monthly').bind('expand', function () {
@@ -260,31 +260,7 @@
 		var sparql_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Pulsa3/sparql?query=";
 		var tiira_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Tiira/sparql?query=";
 		
-		var d = new Date();
-		var year = d.getFullYear();
-		var month = (d.getMonth() + 1);
-		var date = d.getDate();
-			
-		var md = new Date();
-		md.setDate(date-14);
-		var mdday = md.getDate();
-		var mdmonth = (md.getMonth()+1);
-
-		var endd = new Date();
-		endd.setDate(date+14);
-		var endday = endd.getDate();
-		var endmonth = (endd.getMonth()+1);
-		
-		if (mdmonth < 10)
-			mdmonth = "0" + mdmonth
-		if (endmonth < 10)
-			endmonth = "0" + endmonth
-		var startDateString = "2012-"+mdmonth+"-"+mdday;
-		var endDateString = "2012-"+endmonth+"-"+endday;
-		
 		var lang;
-		
-
 		
 		var taxId;
 		var taxName;
@@ -491,12 +467,28 @@
 			date = dateArr[ 0 ];
 			month = dateArr[ 1 ];
 			year = '2012';
-			selectedDate = new Date( year, month, date, 0, 0, 0, 0 );
+			selectedDate = new Date( year, parseInt(month)-1, date );
 
 			if (date.toString().length == 1)
 				date = "0" + date;
 			if (month.toString().length == 1)
 				month = "0" + month;
+			
+			/** Calculate start and end dates for calculated observations */
+			var md = new Date( year, parseInt(month)-1, parseInt(date)-14 );
+			var mdday = md.getDate();
+			var mdmonth = (md.getMonth()+1);
+
+			var endd = new Date( year, parseInt(month)-1, parseInt(date)+14 );
+			var endday = endd.getDate();
+			var endmonth = (endd.getMonth()+1);
+			
+			if (mdmonth < 10)
+				mdmonth = "0" + mdmonth
+			if (endmonth < 10)
+				endmonth = "0" + endmonth
+			var startDateString = "2012-"+mdmonth+"-"+mdday;
+			var endDateString = "2012-"+endmonth+"-"+endday;
 			
 			/** Capitalize all separate words */
 			function capitalizeWords(strSentence) {
@@ -627,7 +619,7 @@
 						//getProbs( taxId );
 						
 							getMisIds();
-							
+							createSendButton( false );
 							
 							
 							$("#chartholder").css({"visibility":"visible"});
@@ -800,7 +792,7 @@
 
 			//console.log("Current misids: "+misIDs.length);
 
-			console.log(sparqlQuery);
+			//console.log(sparqlQuery);
 			
 			$.ajax({
 			  url: "relay.php",
@@ -841,7 +833,7 @@
 					
 				}
 				
-					createSendButton();
+					//createSendButton();
 					var width = $("#chartholder").width();
 		  			$("#mapHolder").html(getStaticMapHtml(parseFloat(window.userY),parseFloat(window.userX),width,list)); 
 		  			$("#map").trigger('expand');
@@ -878,8 +870,8 @@
 plotMonthlyObservations();
 							plotOverAllObservations();
 							*/
-							/*updateHitStatus( odds );
-							createSendButton( true );*/
+							/*updateHitStatus( odds );*/
+							createSendButton( true );
 						}
 					});
 				}
@@ -897,8 +889,8 @@ plotMonthlyObservations();
 
 					//butt += "<img src=\"img/" + color + ".png\" />";
 					
-					butt += '<a data-inline="true" data-role="button" target="_new" href="#" onClick="sendInfo();" data-theme="e">';
-					/*butt += '<a data-inline="true" data-role="button" target="_new" href="tiira/index.php?laji=' + encodeURIComponent( tax ) + '&pvm=' + encodeURIComponent( date + '.' + month + '.' + year ) + '&lat=' + encodeURIComponent( userY ) + '&lon=' + encodeURIComponent( userX );
+					//butt += '<a data-inline="true" data-role="button" target="_new" href="#" onClick="sendInfo();" data-theme="e">';
+					butt += '<a data-inline="true" data-role="button" target="_new" href="tiira/index.php?laji=' + encodeURIComponent( tax ) + '&pvm=' + encodeURIComponent( date + '.' + month + '.' + year ) + '&lat=' + encodeURIComponent( userY ) + '&lon=' + encodeURIComponent( userX );
 					if (googled == true)
 						butt += '&paikka=' + encodeURIComponent( locstr );
 					butt += '"';
@@ -921,7 +913,7 @@ plotMonthlyObservations();
 						else
 							butt += ' title="Lajin havaitseminen mahdollista"';
 						butt += ' data-theme="e">';
-					}*/
+					}
 					
 					//console.log( butt );
 					
