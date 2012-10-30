@@ -219,11 +219,11 @@
 		var speciesEn = [];
 		var speciesFi = [];
 		
-
-
-	
+		var d = new Date();
+		var year = d.getFullYear();
+		var month = (d.getMonth() + 1);
+		var date = d.getDate();
 		
-
 
 
 	$('#monthly').bind('expand', function () {
@@ -260,28 +260,14 @@
 		var sparql_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Pulsa3/sparql?query=";
 		var tiira_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Tiira/sparql?query=";
 		
-		var d = new Date();
-		var year = d.getFullYear();
-		var month = (d.getMonth() + 1);
-		var date = d.getDate();
-			
-		var md = new Date();
-		md.setDate(date-30);
-		var mdday = d.getDate();
-		var mdmonth = (md.getMonth()+1);
-		//mdmonth = (mdmonth.length > 2 ? (md.getMonth()+1) : mdmonth);
-		//var lastMonthString = md.getFullYear()+"-"+mdmonth+"-"+md.getDate();
-		
 		var lang;
-		
-
 		
 		var taxId;
 		var taxName;
 		
 		var gjson;
 		
-		var range = 1;
+		var range = 0.8;
 		
 		var width = $("#chartholder").width();
 		
@@ -338,13 +324,15 @@
 					r.innerHTML = "<b>Laji</b> - havaittu laji<br />";
 					r.innerHTML += "<b>Paikka</b> - havainnon paikka, koordinaatit tai teksti. Esim. \"Laajalahti, Espoo\"<br />";
 					r.innerHTML += "<b>Aika</b> - havainnon aika<br />";
-					r.innerHTML += "<b>Biotooppi</b> - biotooppi, jossa laji on havaittu<br />";
+					//r.innerHTML += "<b>Biotooppi</b> - biotooppi, jossa laji on havaittu<br />";
+					r.innerHTML += '<p><a href="http://www.seco.tkk.fi/applications/birdwatch/">Lisätietoa sovelluksesta</a></p>';				
 				}
 				if (lang == 'en') {
 					r.innerHTML = "<b>Species</b> - observed species<br />";
 					r.innerHTML += "<b>Location</b> - observation location in coordinates or text. Example: \"Laajalahti, Espoo\"<br />";
 					r.innerHTML += "<b>Time</b> - observation time<br />";
-					r.innerHTML += "<b>Biotope</b> - observation biotope<br />";
+					//r.innerHTML += "<b>Biotope</b> - observation biotope<br />";
+					r.innerHTML += '<p><a href="http://www.seco.tkk.fi/applications/birdwatch/">More information about this application</a></p>';
 				}
 			}
 		}
@@ -408,7 +396,7 @@
 
 				$("#taxonInput").autocomplete({
 					minLength: 2,
-					source: speciesEn.concat( speciesLat )
+					source: speciesFi.concat( speciesLat )
 				});
 				
 			}
@@ -428,11 +416,6 @@
 				for (x in obj.results.result) {
 					speciesEn.push( obj.results.result[ x ].binding.literal.toLowerCase() );
 				}
-
-				$("#taxonInput").autocomplete({
-					minLength: 2,
-					source: lang == "fi" ? speciesFi.concat( speciesLat ) : speciesEn.concat( speciesLat )
-				});
 			}
 		});
 		
@@ -486,12 +469,28 @@
 			date = dateArr[ 0 ];
 			month = dateArr[ 1 ];
 			year = '2012';
-			selectedDate = new Date( year, month, date, 0, 0, 0, 0 );
+			selectedDate = new Date( year, parseInt(month)-1, date );
 
 			if (date.toString().length == 1)
 				date = "0" + date;
 			if (month.toString().length == 1)
 				month = "0" + month;
+			
+			/** Calculate start and end dates for calculated observations */
+			var md = new Date( year, parseInt(month)-1, parseInt(date)-14 );
+			var mdday = md.getDate();
+			var mdmonth = (md.getMonth()+1);
+
+			var endd = new Date( year, parseInt(month)-1, parseInt(date)+14 );
+			var endday = endd.getDate();
+			var endmonth = (endd.getMonth()+1);
+			
+			if (mdmonth < 10)
+				mdmonth = "0" + mdmonth
+			if (endmonth < 10)
+				endmonth = "0" + endmonth
+			var startDateString = "2012-"+mdmonth+"-"+mdday;
+			var endDateString = "2012-"+endmonth+"-"+endday;
 			
 			/** Capitalize all separate words */
 			function capitalizeWords(strSentence) {
@@ -622,7 +621,7 @@
 						//getProbs( taxId );
 						
 							getMisIds();
-							
+							createSendButton( false );
 							
 							
 							$("#chartholder").css({"visibility":"visible"});
@@ -672,7 +671,7 @@
 					encodeURIComponent( sparqlQuery ) },
 			  success: function(data) {
 				var obj = $.parseJSON(data);
-				console.log(data);				
+				//console.log(data);				
 				var r = document.getElementById("resultHolder");
 				var misid_str = '';
 
@@ -686,7 +685,7 @@
 				
 				if (obj.results.hasOwnProperty( 'result' )) {
 					if ( obj.results.result.length > 1 ) {
-						console.log(obj.results.result.length);
+						//console.log(obj.results.result.length);
 						if (lang == 'fi')
 							misid_str += "Varo sekoittamasta lajeihin: <br />";
 						else if (lang == 'en')
@@ -757,12 +756,12 @@
 			  success: function(data) {
 				var obj = data;
 				
-				console.log(data);
+				//console.log(data);
 				
 				var bindings = data.results.bindings;
 				
-				console.log(misIDs[x]);
-				console.log(bindings);
+				//console.log(misIDs[x]);
+				//console.log(bindings);
 					
 				
 				
@@ -775,7 +774,7 @@
 	}
 											
 	function getObservationsMonthAgo() {
- 	console.log("Getting observations month ago ...");
+ 	//console.log("Getting observations month ago ...");
  	
  			var xlongmin = (parseFloat(window.userX)-range);
 			var xlongmax = (parseFloat(window.userX)+range);
@@ -787,15 +786,15 @@
 			//console.log("Current misids: "+misIDs.length);
 
 			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " + 
-					"SELECT ?date ?lat ?long { ?ha rdf:type <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:date_collected ?date . "+
+					"SELECT ?date ?lat ?long { ?ha rdf:type <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:calendar_date ?date . "+
 					"?ha geo:lat ?lat . ?ha geo:long ?long . "+
 					"FILTER ( xsd:float(?long) > "+xlongmin+" && xsd:float(?long) < "+xlongmax+" && xsd:float(?lat) > "+ylatmin+" && xsd:float(?lat) < "+ylatmax+") . "+
-					"FILTER (month(?date) >= "+mdmonth+" && month(?date) <= "+month+" && day(?date) >= "+mdday+")"+
+					"FILTER ((?date >= '"+startDateString+"'^^xsd:date) && (?date <= '"+endDateString+"'^^xsd:date))"+
 					"}"; 
 
 			//console.log("Current misids: "+misIDs.length);
 
-			console.log(sparqlQuery);
+			//console.log(sparqlQuery);
 			
 			$.ajax({
 			  url: "relay.php",
@@ -804,7 +803,7 @@
 			  success: function(data) {
 				var obj = $.parseJSON(data);
 				
-				console.log(obj);
+				//console.log(obj);
 				
 				if(obj.results.bindings.length > 0) {
 					if(lang=="fi") {
@@ -820,7 +819,7 @@
 					for(var i=0;i<obj.results.bindings.length;i++)
 					{
 						list.push(obj.results.bindings[i]["lat"].value+","+obj.results.bindings[i]["long"].value);
-						console.log(list[i]);
+						//console.log(list[i]);
 					} 
 
 				} else {
@@ -836,7 +835,7 @@
 					
 				}
 				
-					createSendButton();
+					//createSendButton();
 					var width = $("#chartholder").width();
 		  			$("#mapHolder").html(getStaticMapHtml(parseFloat(window.userY),parseFloat(window.userX),width,list)); 
 		  			$("#map").trigger('expand');
@@ -862,7 +861,7 @@
 								window.userY = objGeocode.results[ 0 ].geometry.location.lat.toFixed(4);
 							}
 							
-							console.log("long: "+window.userX +" lat: "+window.userY);
+							//console.log("long: "+window.userX +" lat: "+window.userY);
 							
 							//getProbs( window.taxId );
 							getMisIds();
@@ -873,8 +872,8 @@
 plotMonthlyObservations();
 							plotOverAllObservations();
 							*/
-							/*updateHitStatus( odds );
-							createSendButton( true );*/
+							/*updateHitStatus( odds );*/
+							createSendButton( true );
 						}
 					});
 				}
@@ -892,8 +891,8 @@ plotMonthlyObservations();
 
 					//butt += "<img src=\"img/" + color + ".png\" />";
 					
-					butt += '<a data-inline="true" data-role="button" target="_new" href="#" onClick="sendInfo();" data-theme="e">';
-					/*butt += '<a data-inline="true" data-role="button" target="_new" href="tiira/index.php?laji=' + encodeURIComponent( tax ) + '&pvm=' + encodeURIComponent( date + '.' + month + '.' + year ) + '&lat=' + encodeURIComponent( userY ) + '&lon=' + encodeURIComponent( userX );
+					//butt += '<a data-inline="true" data-role="button" target="_new" href="#" onClick="sendInfo();" data-theme="e">';
+					butt += '<a data-inline="true" data-role="button" target="_new" href="tiira/index.php?laji=' + encodeURIComponent( tax ) + '&pvm=' + encodeURIComponent( date + '.' + month + '.' + year ) + '&lat=' + encodeURIComponent( userY ) + '&lon=' + encodeURIComponent( userX );
 					if (googled == true)
 						butt += '&paikka=' + encodeURIComponent( locstr );
 					butt += '"';
@@ -916,7 +915,7 @@ plotMonthlyObservations();
 						else
 							butt += ' title="Lajin havaitseminen mahdollista"';
 						butt += ' data-theme="e">';
-					}*/
+					}
 					
 					//console.log( butt );
 					
@@ -973,7 +972,7 @@ plotMonthlyObservations();
 						var hit = false;
 						var coords;
 						
-						console.log( obj[ 0 ] );
+						//console.log( obj[ 0 ] );
 						
 						if (userX !== null && userY != null) {
 							if (( obj[ 0 ] >= 0 ) && ( obj[ 0 ] < 2 ))
@@ -991,7 +990,7 @@ plotMonthlyObservations();
 		
 		
 		function plotOverAllObservations() {
-		 	console.log("Gettin overall observations ...");
+		 	//console.log("Gettin overall observations ...");
  	
 			var xlongmin = (parseFloat(window.userX)-range);
 			var xlongmax = (parseFloat(window.userX)+range);
@@ -1005,7 +1004,7 @@ plotMonthlyObservations();
 					"FILTER ( xsd:float(?long) > "+xlongmin+" && xsd:float(?long) < "+xlongmax+" && xsd:float(?lat) > "+ylatmin+" && xsd:float(?lat) < "+ylatmax+") . "+
 					"} GROUP BY (year(?date) AS ?year) ORDER BY ASC(?year)"; 
 
-			console.log(sparqlQuery);
+			//console.log(sparqlQuery);
 			
 			$.ajax({
 			  url: "relay.php",
@@ -1016,14 +1015,14 @@ plotMonthlyObservations();
 				
 				
 				
-				console.log("json:"); 
-				console.log(data);
+				//console.log("json:"); 
+				//console.log(data);
 				
 				if(obj.results.bindings.length > 1) {
 				
 				gjson = sgvizler.parser.SparqlJSON2GoogleJSON(obj);
-				console.log("gjson:"); 
-				console.log(gjson);
+				//console.log("gjson:"); 
+				//console.log(gjson);
 				
 				
 				var options;
@@ -1054,7 +1053,7 @@ plotMonthlyObservations();
         		
 		var data = new google.visualization.DataTable(gjson);
 
-      console.log(data.toJSON());
+      //console.log(data.toJSON());
         
         
         var chart = new google.visualization.LineChart(document.getElementById('chart_div2'));
@@ -1071,7 +1070,7 @@ plotMonthlyObservations();
 	}		
 
 	function plotMonthlyObservations() {
-		 	console.log("Getting monthly observations ...");
+		 	//console.log("Getting monthly observations ...");
  	
 			var sparqlQuery;
 			
@@ -1080,15 +1079,15 @@ plotMonthlyObservations();
 			
 			var ylatmin = (parseFloat(window.userY)-range);
 			var ylatmax = (parseFloat(window.userY)+range);
-
+			
 			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " + 
-					"SELECT xsd:string(?mon) (COUNT(?date) AS ?Lkm) { ?ha rdf:type <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:date_collected ?date . "+
+					"SELECT xsd:string(?mon) (COUNT(?ha) AS ?Lkm) { ?ha rdf:type <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:date_collected ?date . "+
 					"?ha geo:lat ?lat . ?ha geo:long ?long . "+
 					"FILTER ( xsd:float(?long) > "+xlongmin+" && xsd:float(?long) < "+xlongmax+" && xsd:float(?lat) > "+ylatmin+" && xsd:float(?lat) < "+ylatmax+") . "+
 					"} GROUP BY (month(?date) AS ?mon) ORDER BY ASC(?mon)"; 
 
 
-			console.log(sparqlQuery);
+			//console.log(sparqlQuery);
 			
 			$.ajax({
 			  url: "relay.php",
@@ -1097,14 +1096,14 @@ plotMonthlyObservations();
 			  success: function(data) {
 				var obj = $.parseJSON(data);
 				
-				console.log("json:"); 
-				console.log(data);
+				//console.log("json:"); 
+				//console.log(data);
 				
 				if(obj.results.bindings.length > 1) {
 				
 				gjson = sgvizler.parser.SparqlJSON2GoogleJSON(obj);
-				console.log("gjson:"); 
-				console.log(gjson);
+				//console.log("gjson:"); 
+				//console.log(gjson);
 				
 				
 				var options;
@@ -1175,7 +1174,7 @@ plotMonthlyObservations();
         		data.addRow([months[data.getNumberOfRows()], 0, null]);
         	} 
         
-      console.log(data.toJSON());
+      //console.log(data.toJSON());
         
         
         var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
@@ -1197,7 +1196,7 @@ plotMonthlyObservations();
 
 			html = '<img src="http://maps.google.com/maps/api/staticmap?center=' + x + ',' + y + '&markers=' + x + ',' + y + '&zoom=10&size='+w+'x300&maptype=terrain&sensor=false';
 		
-				if(list!=null && list.length>0) {
+				if(list!=null && list.length>0 && html.length < 2008) {
 					for(var i=0;i<list.length;i++)
 					html+="&markers=size:tiny|label:S|"+list[i];
 				}
