@@ -29,18 +29,8 @@ function focus_tunnus() { /* 20100512 AJL */
 -->
 </script>		
 <div id="header">
-<!--<a target="_blank" href="http://www.birdlife.fi/" title="BirdLife Suomi etusivu"><img src="index.php_files/header.jpg" alt="etusivu" border="0"></a>-->
-<h1 style="color: white;">TESTILOMAKE</h1>
+<a target="_blank" href="http://www.birdlife.fi/" title="BirdLife Suomi etusivu"><img src="index.php_files/header.jpg" alt="etusivu" border="0"></a>
 </div>	
-<div id="user">
-    <div id="user-logged">
-    <p><strong></strong></p>
-    <ul>
-    <li id="user-info"><a href="http://tiira.fi/index.php?toiminto=4">Omat tiedot</a></li>
-    <li id="user-logout"><a href="http://tiira.fi/index.php?logout=1" accesskey="q">Kirjaudu ulos</a></li>
-    <li id="user-time">11.7.2012 13:57:44</li>
-    </ul>
-    </div></div>
 <div id="main"><div id="content">    <script language="JavaScript" type="text/javascript" src="index.php_files/ajax_funktiot.js"></script>
 	
 <script type="text/javascript">
@@ -174,7 +164,7 @@ function today() {
 -->
 </script>
 	
-<form name="havaintoilmoituslomake" method="post" id="havaintoilmoituslomake" action="index.php?toiminto=6">
+<form name="havaintoilmoituslomake" method="post" id="havaintoilmoituslomake" action="http://www.tiira.fi/index.php?toiminto=6">
 <!-- aloitetaan lomakkeen luonti  -->
 <input name="tiedot" value="2" type="hidden">
 <input name="rivit" value="1" type="hidden">
@@ -222,6 +212,8 @@ function today() {
 <?php 
 if (strlen( $_GET['paikka'] ) > 1)
 	echo $_GET['paikka'].'<br />';
+/*else
+	echo 'espoo, otaniemi '.'<br />';*/
 echo '('.$_GET['lat'].', '.$_GET['lon'].')' 
 ?>
 </div></td>
@@ -348,7 +340,7 @@ echo '('.$_GET['lat'].', '.$_GET['lon'].')'
 <th><img alt="Pesintään viittaava havainto" src="index.php_files/pesa.gif" title="Pesintään viittaava havainto"></th>
 </tr>
 
-<tr><td></td><td>    <input name="lukum0" size="4" onfocus="javascript:ohje('Lukumäärä','Yksilöiden lukumäärä. Jos ilmoitat parin/pareja eli valitset sukupuoli-valikosta \'pariutuneet\', niin laita yksilömääräksi yksilöiden kokonaismäärä. Esim yhden parin tapauksessa anna määräksi ja sukupuoleksi \'pariutuneet\'.')" tabindex="6" autocomplete="off" type="text">
+<tr><td></td><td>    <input name="lukum0" size="4" onfocus="javascript:ohje('Lukumäärä','Yksilöiden lukumäärä. Jos ilmoitat parin/pareja eli valitset sukupuoli-valikosta \'pariutuneet\', niin laita yksilömääräksi yksilöiden kokonaismäärä. Esim yhden parin tapauksessa anna määräksi ja sukupuoleksi \'pariutuneet\'.')" tabindex="6" autocomplete="off" type="text" value="1">
     </td>
     <td>
     <select name="sex0" size="1" onfocus="javascript:ohje('Sukupuoli','Sukupuoli. k=koiras, n=naaras, pariutuneet=pari/pareja. Esim. jos ilmoitat 5 paria, niin anna lukumääräksi 10 ja sukupuoleksi \'pariutuneet\'.')" tabindex="7">
@@ -585,7 +577,7 @@ Muut havainnoijat</span>&nbsp;
 <div class="ruler"></div>
 
 <center>
-<!--<span class="submitbutton" onmouseover="javascript:ohje('Lähetä havainto','Ilmoita havainto')"><input name="f-submit" id="f-submit" value="Lähetä havainto" tabindex="18" type="submit"></span>-->
+<span class="submitbutton" onmouseover="javascript:ohje('Lähetä havainto','Ilmoita havainto')"><input name="f-submit" id="f-submit" value="Lähetä havainto" tabindex="18" type="submit"></span>
 <!--
 <span class="resetbutton" onmouseover="javascript:ohje('Tyhjenn&auml; lomake','Ohje...')"><input type="submit" name="lopeta" value="Tyhjenn&auml; lomake" /></span>
 -->
@@ -607,47 +599,10 @@ ohje('','');
 		</div><div id="navi">	<div id="nav">
 	<h2>Navigointi</h2>
 	<a name="navi-a"></a> 
-	<div id="normal">
-	<ul>
-	<li><a href="http://tiira.fi/index.php" id="etusivu">Etusivu</a></li>
-	<li class="otsikko"><b>Ilmoita havainto</b>
-	<ul>
-	<li><a href="http://tiira.fi/index.php?toiminto=6" id="ilmoita">Peruslomake</a></li>
-			<li class="noborder"><a href="http://tiira.fi/index.php?toiminto=6&amp;muutto=1" id="ilmoita2">Muuttolomake</a></li>
-			</ul>
-	</li>
-	<li><a href="http://tiira.fi/index.php?toiminto=22">Omat paikat</a></li>
-	<li><a href="javascript:omatkaverit()">Omat kaverit</a></li>	<!-- 20090827 AJL -->
-    <li><a href="http://tiira.fi/index.php?toiminto=13" id="statistiikka">Tilastoja</a></li>
-    <li class="otsikko"><b>Havaintoselain</b>
-	<ul>
-	<li><a href="http://tiira.fi/index.php?toiminto=8" id="hakukriteerit">Perushaku</a></li>
-		<li><a href="http://tiira.fi/index.php?toiminto=29" id="advancedhaku">Laaja haku</a></li>
-	<li><a href="http://tiira.fi/index.php?toiminto=55" id="ensihavainnot">Ensihavainnot</a></li>
-	<li><a href="http://tiira.fi/index.php?toiminto=53" id="havaintosivut_alue">Ensihavainnot alue</a></li>
-		<li><a href="http://tiira.fi/index.php?toiminto=17" id="omat_haut">Omat haut</a></li>
-	<li><a href="http://tiira.fi/index.php?toiminto=18" id="admin_haut">Yhdistyshaut</a></li>
-	<li><a href="http://tiira.fi/index.php?toiminto=19" id="uber_haut">Valtakunnan haut</a></li>
-	<li class="noborder"><a href="http://tiira.fi/index.php?toiminto=48" id="havaintosivut">Havaintosivut</a></li>	
-	       	</ul>
-	</li>
-	<li class="otsikko"><b>Lajinäyttö</b>
-	<ul>
-	<li><a href="http://tiira.fi/index.php?toiminto=7" id="etsitaksoni">Etsi laji</a></li>
-	<li><a href="http://tiira.fi/index.php?toiminto=3" id="lajinaytto">Selaa lajeja</a></li>
-	<li class="noborder"><a target="_blank" href="http://tiira.fi/rapot/taksonit.html" id="taksonilinkki">Taksoninimikkeet</a></li> <!-- 20120207 AJL -->
-	</ul>
-	</li>
-        <li><a target="_blank" href="http://www.birdlife.fi/ohjeet/tiira_ohje_fi.pdf" id="ohjeet">Ohjeet</a></li>
-	<!-- 20091222 AJL <li><a target="_blank" href="Tiira-bruksanvisning.html" id="svenska">Bruksanvisning</a></li> -->
-	<li><a href="http://tiira.fi/index.php?toiminto=44" id="yhdistyskayttajat_nettiin">Yhdistyskäyttäjät</a></li>
-	<li><a href="http://www.tiirafoorumi.info/keskustelu/phpBB3/index.php" target="_blank" id="foorumi">Foorumi</a></li>
-	</ul>
-    </div>
 	
     <div id="footer">
     <p>© <a href="http://www.birdlife.fi/" target="_blank">BirdLife Suomi ry</a></p>
-    <p>Ongelmia? Palautetta? Kysy  <a href="http://www.tiirafoorumi.info/keskustelu/phpBB3/index.php" target="_blank">foorumilta</a></p>
+    <p><b>Lähettääksesi lomakkeen tiedot sinun tulee olla kirjautunut Tiira-havaintopalveluun.</b></p><p><i>Tämä lomake on prototyyppi.</i></p>
     </div>
 </div>    
 </div></div>
