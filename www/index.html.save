@@ -202,12 +202,12 @@
 	</div>
 	
 	<div data-shadow="false" data-role="collapsible" id="monthly">
-   <h3 id="monthplot"><span class="transl" data-fi="Näytä havainnot kuukausittain" data-en="Show monthly stats"></h3>
+   <h3 id="monthplot"><span class="transl" data-fi="Näytä havainnot kuukausitasolla" data-en="Show monthly stats"></h3>
    <div id="chart_div" style="width: 100%; height: 300px;"> </div>
 	</div>
 	
 	<div data-shadow="false" data-role="collapsible" id="yearly">
-   <h3 id="yearplot"><span class="transl" data-fi="Näytä havainnot vuosittain" data-en="Show yearly stats"></h3>
+   <h3 id="yearplot"><span class="transl" data-fi="Näytä havainnot vuositasolla" data-en="Show yearly stats"></h3>
    <div id="chart_div2" style="width: 100%; height: 300px;"> </div>
 	</div>
 	
@@ -258,7 +258,7 @@
 		} 
 		
 		var sparql_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Pulsa3/sparql?query=";
-		var tiira_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Tiira2/sparql?query=";
+		var tiira_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Tiira/sparql?query=";
 		
 		var lang;
 		
@@ -325,14 +325,13 @@
 					r.innerHTML += "<b>Paikka</b> - havainnon paikka, koordinaatit tai teksti. Esim. \"Laajalahti, Espoo\"<br />";
 					r.innerHTML += "<b>Aika</b> - havainnon aika<br />";
 					//r.innerHTML += "<b>Biotooppi</b> - biotooppi, jossa laji on havaittu<br />";
-					r.innerHTML += '<p><a href="http://www.seco.tkk.fi/applications/birdwatch/">Lisätietoa sovelluksesta</a></p>';				
-				}
+				//	r.innerHTML + = "<p><a href="http://www.seco.tkk.fi/applications/birdwatch/">Lisätietoa sovelluksesta</a></p>";				
+}
 				if (lang == 'en') {
 					r.innerHTML = "<b>Species</b> - observed species<br />";
 					r.innerHTML += "<b>Location</b> - observation location in coordinates or text. Example: \"Laajalahti, Espoo\"<br />";
 					r.innerHTML += "<b>Time</b> - observation time<br />";
-					//r.innerHTML += "<b>Biotope</b> - observation biotope<br />";
-					r.innerHTML += '<p><a href="http://www.seco.tkk.fi/applications/birdwatch/">More information about this application</a></p>';
+					//r.innerHTML += "<b>Biotope</b> - observation biotope<br 
 				}
 			}
 		}
@@ -786,7 +785,7 @@
 			//console.log("Current misids: "+misIDs.length);
 
 			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " + 
-					"SELECT ?date ?lat ?long { ?ha hh:scientific_name <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:calendar_date ?date . "+
+					"SELECT ?date ?lat ?long { ?ha rdf:type <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:calendar_date ?date . "+
 					"?ha geo:lat ?lat . ?ha geo:long ?long . "+
 					"FILTER ( xsd:float(?long) > "+xlongmin+" && xsd:float(?long) < "+xlongmax+" && xsd:float(?lat) > "+ylatmin+" && xsd:float(?lat) < "+ylatmax+") . "+
 					"FILTER ((?date >= '"+startDateString+"'^^xsd:date) && (?date <= '"+endDateString+"'^^xsd:date))"+
@@ -891,6 +890,7 @@ plotMonthlyObservations();
 
 					//butt += "<img src=\"img/" + color + ".png\" />";
 					
+					//butt += '<a data-inline="true" data-role="button" target="_new" href="#" onClick="sendInfo();" data-theme="e">';
 					butt += '<a data-inline="true" data-role="button" target="_new" href="tiira/index.php?laji=' + encodeURIComponent( tax ) + '&pvm=' + encodeURIComponent( date + '.' + month + '.' + year ) + '&lat=' + encodeURIComponent( userY ) + '&lon=' + encodeURIComponent( userX );
 					if (googled == true)
 						butt += '&paikka=' + encodeURIComponent( locstr );
@@ -998,7 +998,7 @@ plotMonthlyObservations();
 			var ylatmax = (parseFloat(window.userY)+range);
 			
 			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " + 
-					"SELECT xsd:string(?year) (COUNT(?date) AS ?Lkm) { ?ha hh:scientific_name <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:date_collected ?date . "+
+					"SELECT xsd:string(?year) (COUNT(?date) AS ?Lkm) { ?ha rdf:type <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:date_collected ?date . "+
 					"?ha geo:lat ?lat . ?ha geo:long ?long . "+
 					"FILTER ( xsd:float(?long) > "+xlongmin+" && xsd:float(?long) < "+xlongmax+" && xsd:float(?lat) > "+ylatmin+" && xsd:float(?lat) < "+ylatmax+") . "+
 					"} GROUP BY (year(?date) AS ?year) ORDER BY ASC(?year)"; 
@@ -1080,7 +1080,7 @@ plotMonthlyObservations();
 			var ylatmax = (parseFloat(window.userY)+range);
 			
 			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " + 
-					"SELECT xsd:string(?mon) (COUNT(?ha) AS ?Lkm) { ?ha hh:scientific_name <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:date_collected ?date . "+
+					"SELECT xsd:string(?mon) (COUNT(?ha) AS ?Lkm) { ?ha rdf:type <"+taxId+"> . ?ha rdf:type hh:Observation . ?ha hh:date_collected ?date . "+
 					"?ha geo:lat ?lat . ?ha geo:long ?long . "+
 					"FILTER ( xsd:float(?long) > "+xlongmin+" && xsd:float(?long) < "+xlongmax+" && xsd:float(?lat) > "+ylatmin+" && xsd:float(?lat) < "+ylatmax+") . "+
 					"} GROUP BY (month(?date) AS ?mon) ORDER BY ASC(?mon)"; 
@@ -1215,18 +1215,17 @@ plotMonthlyObservations();
 		
 		function displayError() {
 		//  $('#locationInput').attr('placeholder','Write placename (Town, placename) or address');
-			if ($('#locationInput')[ 0 ].value.length == 0) {
-				if (lang == 'fi')
-					$('#locationInput')[ 0 ].value = 'Paikan hakeminen epäonnistui';
-				else
-					$('#locationInput')[ 0 ].value = 'Unable to get current location';
-			}
+		  $('#locationInput')[ 0 ].value = 'Unable to get current location';
 		}
 		
 		if (navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition( displayPosition, displayError, {enableHighAccuracy: true, timeout:45000, maximumAge: 60000});
 		}
 
+		function sendInfo() {
+			$("#resultHolder2").html('<b>Tietojen lähettäminen ei ole vielä käytössä.</b>');
+		}
+					
 	/*if (lang == 'fi') {
 		document.write('\u003cscript language=\u0022javascript\u0022 src=\u0022jquery-ui/js/jquery.ui.datepicker-fi.js\u0022>\u003c/script>');
 	}*/
