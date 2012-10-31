@@ -198,7 +198,7 @@
 
 	<div data-shadow="false" data-role="collapsible" id="map">
    <h3 id="mapplot"><span class="transl" data-fi="Näytä kartalla" data-en="Show on map"></span></h3>
-   <div id="mapHolder" style="width: 100%; height: 300px;"></div>
+   <div id="mapHolder" style="width: 100%; height: 315px;"></div>
 	</div>
 	
 	<div data-shadow="false" data-role="collapsible" id="monthly">
@@ -269,7 +269,7 @@
 		
 		var range = 0.8;
 		
-		var width = $("#chartholder").width();
+		var width = $("#mainDiv").width();
 		
 		var tax;
 		
@@ -324,6 +324,7 @@
 					r.innerHTML = "<b>Laji</b> - havaittu laji<br />";
 					r.innerHTML += "<b>Paikka</b> - havainnon paikka, koordinaatit tai teksti. Esim. \"Laajalahti, Espoo\"<br />";
 					r.innerHTML += "<b>Aika</b> - havainnon aika<br />";
+					r.innerHTML += "<p>Sovellus käyttää otosta Tiira-palvelun datasta vuosilta 2007-2011.<br /></p>";
 					//r.innerHTML += "<b>Biotooppi</b> - biotooppi, jossa laji on havaittu<br />";
 					r.innerHTML += '<p><a href="http://www.seco.tkk.fi/applications/birdwatch/">Lisätietoa sovelluksesta</a></p>';				
 				}
@@ -836,7 +837,7 @@
 				}
 				
 					//createSendButton();
-					var width = $("#chartholder").width();
+					var width = $("#mainDiv").width();
 		  			$("#mapHolder").html(getStaticMapHtml(parseFloat(window.userY),parseFloat(window.userX),width,list)); 
 		  			$("#map").trigger('expand');
 				
@@ -1031,10 +1032,11 @@ plotMonthlyObservations();
             2: {
                 style: 'line'
             }
-        },title: 'Reported '+tax+' observations',
+        },title: 'Reported '+tax+' observations from area',
         width: width,
           			  curveType: "function",
-        			  hAxis:  {title: 'Year'}
+        			  hAxis:  {title: 'Year', showTextEvery: 1 },
+        			  vAxis: {viewWindowMode: "explicit", viewWindow:{ min: 0 }}
       			 }; }
         		else
         		{
@@ -1042,10 +1044,11 @@ plotMonthlyObservations();
             2: {
                 style: 'line'
             }
-        },title: 'Raportoidut havainnot lajista ' + tax,
+        },title: 'Alueelta raportoidut havainnot lajista ' + tax,
         				width: width,
           			  curveType: "function",
-        			  hAxis:  {title: 'Vuosi'}
+        			  hAxis:  {title: 'Year', showTextEvery: 1 },
+        			  vAxis: {viewWindowMode: "explicit", viewWindow:{ min: 0 }}
       			 };	
         			
         		}
@@ -1113,7 +1116,7 @@ plotMonthlyObservations();
                 style: 'line'
             }
         },
-        			  title: 'Reported '+tax+' observations',
+        			  title: 'Reported '+tax+' observations from area',
         			  width: width,
         			  height: width*2,
           			  curveType: "function",
@@ -1127,7 +1130,7 @@ plotMonthlyObservations();
                 style: 'line'
             }
         },
-        			  title: 'Raportoidut havainnot lajista ' + tax,
+        			  title: 'Alueelta raportoidut havainnot lajista ' + tax,
         			  width: width,
         			  height: width*2,
           			  curveType: "function",
@@ -1193,11 +1196,11 @@ plotMonthlyObservations();
 		
 		function getStaticMapHtml(x,y,w,list) {
 
-			html = '<img src="http://maps.google.com/maps/api/staticmap?center=' + x + ',' + y + '&markers=' + x + ',' + y + '&zoom=10&size='+w+'x300&maptype=terrain&sensor=false';
+			html = '<img src="http://maps.google.com/maps/api/staticmap?center=' + x + ',' + y + '&markers=' + x + ',' + y + '&zoom=10&size='+w+'x320&maptype=terrain&sensor=false';
 		
-				if(list!=null && list.length>0 && html.length < 2008) {
-					for(var i=0;i<list.length;i++)
-					html+="&markers=size:tiny|label:S|"+list[i];
+				if(list!=null && list.length>0) {
+					for(var i=0;i<list.length && html.length < 1800;i++)
+						html+="&markers=size:tiny|label:S|"+list[i];
 				}
 
 				html+="&key=ABQIAAAAOVuTVW1aChPiS8ukar-AChRkY9KrTsc54SNfat8hJ7dc0OtNkRRuDC5nOgkBT53gdVJJH7oIXf0z-g"
