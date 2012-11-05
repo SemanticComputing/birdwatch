@@ -27,6 +27,7 @@
 	<script src="jquery-ui/js/jquery-ui-1.8.21.custom.min.js"></script>
 	<script src="jquery.mobile-1.1.0.min.js"></script>
 	<script src="https://www.google.com/jsapi"></script>
+	<script src="http://maps.googleapis.com/maps/api/js?sensor=false&amp;libraries=places&language=fi" type="text/javascript"></script>
 
 	
 	<style type="text/css">
@@ -157,9 +158,9 @@
     		
 <div class="ui-body ui-body-b" id="mainDiv">
 		<label for="taxonInput" class="transl" data-fi="Laji" data-en="Species"></label>
-		<input id="taxonInput" class="ui-autocomplete-input" />
-		<label for="locationInput" class="transl" data-fi="Paikka" data-en="Location"></label>
-		<input id="locationInput" type="text" />
+		<input id="taxonInput" class="ui-autocomplete-input" placeholder="Syötä havaittu laji"/>
+		<label for="locationInput" class="transl" data-fi="Paikka" data-en="Location" ></label>
+		<input id="locationInput" type="text" placeholder="Anna paikannimi tai osoite"/>
 		<label for="datepicker" class="select transl" data-fi="Aika" data-en="Date"></label>
 		<input name="date1" id="datepicker" type="text" />
 		
@@ -198,23 +199,24 @@
 
 	<div data-shadow="false" data-role="collapsible" id="map">
    <h3 id="mapplot"><span class="transl" data-fi="Näytä kartalla" data-en="Show on map"></span></h3>
-   <div id="mapHolder" style="width: 100%; height: 315px;"></div>
+   <div id="mapHolder" style="width: 100%; height: 315px;"><img src="load.gif" alt="Loading ..."/></div>
 	</div>
 	
 	<div data-shadow="false" data-role="collapsible" id="monthly">
    <h3 id="monthplot"><span class="transl" data-fi="Näytä havainnot kuukausittain" data-en="Show monthly stats"></h3>
-   <div id="chart_div" style="width: 100%; height: 300px;"> </div>
+   <div id="chart_div" style="width: 100%; height: 300px;"><img src="load.gif" alt="Loading ..."/></div>
 	</div>
 	
 	<div data-shadow="false" data-role="collapsible" id="yearly">
    <h3 id="yearplot"><span class="transl" data-fi="Näytä havainnot vuosittain" data-en="Show yearly stats"></h3>
-   <div id="chart_div2" style="width: 100%; height: 300px;"> </div>
+   <div id="chart_div2" style="width: 100%; height: 300px;"><img src="load.gif" alt="Loading ..."/></div>
 	</div>
 	
 	</div>
 
 	<script>
-		
+	
+
 		var speciesLat = [];
 		var speciesEn = [];
 		var speciesFi = [];
@@ -267,7 +269,7 @@
 		
 		var gjson;
 		
-		var range = 0.8;
+		var range = 0.4;
 		
 		var width = $("#mainDiv").width();
 		
@@ -301,6 +303,36 @@
 	
 
 		langFi();
+		
+		
+		
+		
+		
+function googleAutocomplete() {
+	
+ var options = {
+  types: ['geocode'],
+  componentRestrictions: {country: "fi"}
+ };
+
+ var input = document.getElementById('locationInput');
+ var autocomplete = new google.maps.places.Autocomplete(input, options);
+ 
+         google.maps.event.addListener(autocomplete, 'place_changed', function() {
+       
+          var place = autocomplete.getPlace();
+          if (!place.geometry) {
+			  // TODO Can this happen?     
+          } else {
+             // input.value = place.geometry.location.Ya.toFixed(4)+","+place.geometry.location.Za.toFixed(4);
+              window.userX = place.geometry.location.lng().toFixed(4);
+              window.userY = place.geometry.location.lat().toFixed(4);
+             // console.log("LAT: "+window.userX+": LON: "+window.userY);
+          }
+        });
+}
+
+google.maps.event.addDomListener(window, 'load', googleAutocomplete);
 	
 
 		
@@ -352,6 +384,9 @@
 			//$('#select-choice-1')[ 0 ].value = '-';
 			$.getScript("jquery-ui/js/jquery.ui.datepicker-fi.js", function(){ });
 
+			$('#locationInput').attr('placeholder','Anna paikannimi tai osoite');
+			$('#taxonInput').attr('placeholder','Syötä havaittu laji');
+
 		}
 		
 		/** Set language to english */
@@ -366,6 +401,9 @@
 			});
 
 			$.getScript("jquery-ui/js/jquery.ui.datepicker-en-GB.js", function(){ });
+			
+			$('#locationInput').attr('placeholder','Write placename or address');
+			$('#taxonInput').attr('placeholder','Input observed species');
 		}
 		
 		/** Datepicker code */
@@ -426,7 +464,6 @@
 		}
 		
 		function resetResults() {
-			
 			$("#observationHolder").empty();
 			$("#speciesHolder").empty();
 			$("#resultHolder").empty();
@@ -442,6 +479,20 @@
 		
 		/** Get results from form */
 		function getResults() {
+			
+		var locstr = $('#locationInput')[ 0 ].value;
+		
+		
+		if(locstr !== undefined && locstr.length>0) {
+			
+		var locarr = locstr.split(' ');
+				
+		if (( locarr[ 0 ] == 'Latitude:') && (locarr[ 2 ] == 'Longitude:') || window.userX != null && window.userY != null) { 
+			
+		if(window.userX != null && window.userY != null) {
+			$('#locationInput')[ 0 ].value ="Latitude: "+window.userY+", Longitude: "+window.userX;
+		}
+		
 			var loc = "";
 
 			var misIDs = [];
@@ -554,15 +605,15 @@
 				}
 			
 				if ( validTaxon ) {
-					thisStr += " &nbsp; <a href=\"http://" + lang + ".wikipedia.org/wiki/" + capitalizeWords( speciesName.split('/')[ 0 ] ) + "\" target=\"_blank\" title=\"Wikipedia\"><img src=\"w.ico\" /></a>";
+					thisStr += " &nbsp;&nbsp; <a href=\"http://" + lang + ".wikipedia.org/wiki/" + capitalizeWords( speciesName.split('/')[ 0 ] ) + "\" target=\"_blank\" title=\"Wikipedia\"><img src=\"w.ico\" /></a>";
 					//if (lang == 'fi')
 					
 					if ( bLuontoPortti )
-						thisStr += " <a id=\"lp_" + speciesName + "\" href=\"http://www.luontoportti.com/suomi/" + lang + "/linnut/" + speciesLP + "\" target=\"_blank\" title=\"Luontoportti\"><img src=\"lp.ico\" /></a>";
+						thisStr += " &nbsp;&nbsp; <a id=\"lp_" + speciesName + "\" href=\"http://www.luontoportti.com/suomi/" + lang + "/linnut/" + speciesLP + "\" target=\"_blank\" title=\"Luontoportti\"><img src=\"lp.ico\" /></a>";
 					//$('#lp_' + speciesName).hide();
 					
 					if (lang == 'fi')
-						thisStr += " <a href=\"http://atlas3.lintuatlas.fi/tulokset/laji/" + speciesName + "\" target=\"_blank\" title=\"Lintuatlas\"><img src=\"atlas.ico\" /></a>";
+						thisStr += " &nbsp;&nbsp; <a href=\"http://atlas3.lintuatlas.fi/tulokset/laji/" + speciesName + "\" target=\"_blank\" title=\"Lintuatlas\"><img src=\"atlas.ico\" /></a>";
 
 				}
 				
@@ -616,7 +667,7 @@
 				
 				taxId = taxId.results.result.binding.uri;
 				//console.log(taxId);
-				
+			
 				if (taxId.length > 0) {
 					if (userX !== null && userY != null) {
 						//getProbs( taxId );
@@ -624,21 +675,26 @@
 							getMisIds();
 							createSendButton( false );
 							
-							
 							$("#chartholder").css({"visibility":"visible"});
 							
 							}
 					else {
 						
-						googleLoc( locstr );
+						// TODO what if this happens?
+
 					}
 				}
 				} else {
 					resetResults();
-					if(lang=="en")
-					$("#speciesHolder").append(tax+" is not a official birdname in english");
-					else
-					$("#speciesHolder").append(tax+" ei ole virallinen suomalainen linnun nimi");
+					if(tax.length<1) {
+						if(lang=="en")
+							$("#speciesHolder").append(tax+"Please, white name of a bird");
+						else
+							$("#speciesHolder").append(tax+"Kirjoita ensin linnun nimi");
+					} else if(lang=="en")
+							$("#speciesHolder").append(tax+" is not a official birdname in english");
+						else
+							$("#speciesHolder").append(tax+" ei ole virallinen suomalainen linnun nimi");
 				}
 				
 		function getMisIds() {		
@@ -730,50 +786,7 @@
 			r.innerHTML = '';		
 				
 			}
-			
-	function calculateMisIdFractions() {
-		
-		if(misIDs.length > 0) {
-			
-			var xlongmin = (parseFloat(window.userX)-range);
-			var xlongmax = (parseFloat(window.userX)+range);
-			
-			var ylatmin = (parseFloat(window.userY)-range);
-			var ylatmax = (parseFloat(window.userY)+range);
-			
-			for(x in misIDs) {
-		
-			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " + 
-					"SELECT (COUNT(?ha) AS ?count) { ?ha rdf:type <"+misIDs[x]+"> . ?ha rdf:type hh:Observation . ?ha hh:date_collected ?date . "+
-					"?ha geo:lat ?lat . ?ha geo:long ?long . "+
-					"FILTER ( xsd:float(?long) > "+xlongmin+" && xsd:float(?long) < "+xlongmax+" && xsd:float(?lat) > "+ylatmin+" && xsd:float(?lat) < "+ylatmax+") . "+
-					"FILTER (month(?date) >= "+mdmonth+" && month(?date) <= "+month+" && day(?date) >= "+mdday+")"+
-					"}"; 
-			
-			$.ajax({
-			  url: "relay.php",
-			  //dataType: 'jsonp',
-			  data: { url: sparql_url + encodeURIComponent( sparqlQuery)+"&output=json"   },
-			  success: function(data) {
-				var obj = data;
-				
-				//console.log(data);
-				
-				var bindings = data.results.bindings;
-				
-				//console.log(misIDs[x]);
-				//console.log(bindings);
-					
-				
-				
-				// for(x in bindings) console.log(bindings[x]["s"].value);
-				
-				}});
-}
-		}
-		
-	}
-											
+							
 	function getObservationsMonthAgo() {
  	//console.log("Getting observations month ago ...");
  	
@@ -811,7 +824,7 @@
 					$("#observationHolder").append("Alueella tehty "+obj.results.bindings.length+" havaintoa lajista "+tax+" tähän vuodenaikaan (+- 2 viikkoa)");
 				//	$("#speciesNameHolder").append("havaintoa tähän vuodenaikaan (+-2 viikkoa)");
 					} else {
-					$("#speciesNameHolder").append(obj.results.bindings.length+" "+tax+" sightings in the area in this time of year (+- 2 weeks)");
+					$("#observationHolder").append(obj.results.bindings.length+" "+tax+" sightings in the area in this time of year (+- 2 weeks)");
 				//	$("#speciesNameHolder").append(" sightings in the area in this time of year (+- weeks)");						
 					} 
 					
@@ -868,11 +881,7 @@
 							getMisIds();
 							$("#chartholder").css({"visibility":"visible"});
 							
-							
-							/*	
-plotMonthlyObservations();
-							plotOverAllObservations();
-							*/
+			
 							/*updateHitStatus( odds );*/
 							createSendButton( true );
 						}
@@ -986,7 +995,8 @@ plotMonthlyObservations();
 			}
 			});
 			
-		}
+		}}
+	}
 		
 		
 		function plotOverAllObservations() {
@@ -1032,7 +1042,7 @@ plotMonthlyObservations();
             2: {
                 style: 'line'
             }
-        },title: 'Reported '+tax+' observations from area',
+        },title: 'All yearly'+tax+' observations from the area (2007-2011)',
         width: width,
           			  curveType: "function",
         			  hAxis:  {title: 'Year', showTextEvery: 1 },
@@ -1044,10 +1054,10 @@ plotMonthlyObservations();
             2: {
                 style: 'line'
             }
-        },title: 'Alueelta raportoidut havainnot lajista ' + tax,
+        },title: 'Alueen kaikki vuosittaiset havainnot lajista ' + tax+' (2007-2011)',
         				width: width,
           			  curveType: "function",
-        			  hAxis:  {title: 'Year', showTextEvery: 1 },
+        			  hAxis:  {title: 'Vuosi', showTextEvery: 1 },
         			  vAxis: {viewWindowMode: "explicit", viewWindow:{ min: 0 }}
       			 };	
         			
@@ -1061,6 +1071,10 @@ plotMonthlyObservations();
         var chart = new google.visualization.LineChart(document.getElementById('chart_div2'));
         chart.draw(data, options);
 
+				} else {
+					// TODO This isnt working why ?
+					$('#chartdiv2').html("<p>Ei yhtään havaintoja</p>");
+					
 				}
 				
 				}
@@ -1098,7 +1112,7 @@ plotMonthlyObservations();
 			  success: function(data) {
 				var obj = $.parseJSON(data);
 				
-				//console.log("json:"); 
+			//	console.log("json:"); 
 				//console.log(data);
 				
 				if(obj.results.bindings.length > 1) {
@@ -1116,7 +1130,7 @@ plotMonthlyObservations();
                 style: 'line'
             }
         },
-        			  title: 'Reported '+tax+' observations from area',
+        			  title: 'All monthly '+tax+'-observations from the area (2007-2011)',
         			  width: width,
         			  height: width*2,
           			  curveType: "function",
@@ -1130,7 +1144,7 @@ plotMonthlyObservations();
                 style: 'line'
             }
         },
-        			  title: 'Alueelta raportoidut havainnot lajista ' + tax,
+        			  title: 'Alueen '+tax+'-havaintojen yhteismäärät kuukausittain (2007-2011)',
         			  width: width,
         			  height: width*2,
           			  curveType: "function",
@@ -1182,7 +1196,12 @@ plotMonthlyObservations();
         var chart = new google.visualization.LineChart(document.getElementById('chart_div'));
         chart.draw(data, options);
 
+				} else {
+					// TODO This isnt working why ?
+					//document.getElementById('chart_div').value="<p>Ei yhtään havaintoja</p>";
+					
 				}
+				
 				
 				}
 				
@@ -1196,7 +1215,7 @@ plotMonthlyObservations();
 		
 		function getStaticMapHtml(x,y,w,list) {
 
-			html = '<img src="http://maps.google.com/maps/api/staticmap?center=' + x + ',' + y + '&markers=' + x + ',' + y + '&zoom=10&size='+w+'x320&maptype=terrain&sensor=false';
+			html = '<img src="http://maps.google.com/maps/api/staticmap?center=' + x + ',' + y + '&markers=' + x + ',' + y + '&zoom=09&size='+w+'x320&maptype=terrain&sensor=false';
 		
 				if(list!=null && list.length>0) {
 					for(var i=0;i<list.length && html.length < 1800;i++)
