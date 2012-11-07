@@ -324,10 +324,11 @@ function googleAutocomplete() {
           if (!place.geometry) {
 			  // TODO Can this happen?     
           } else {
-             // input.value = place.geometry.location.Ya.toFixed(4)+","+place.geometry.location.Za.toFixed(4);
-              window.userX = place.geometry.location.lng().toFixed(4);
-              window.userY = place.geometry.location.lat().toFixed(4);
+             window.userX = place.geometry.location.lng().toFixed(4);
+             window.userY = place.geometry.location.lat().toFixed(4);
+             input.value = input.value + " (lat: " + window.userY + ", long: " + window.userX + ")";
              // console.log("LAT: "+window.userX+": LON: "+window.userY);
+             //console.log( place.address_components );
           }
         });
 }
@@ -402,7 +403,7 @@ google.maps.event.addDomListener(window, 'load', googleAutocomplete);
 
 			$.getScript("jquery-ui/js/jquery.ui.datepicker-en-GB.js", function(){ });
 			
-			$('#locationInput').attr('placeholder','Write placename or address');
+			$('#locationInput').attr('placeholder','Write name of place or address');
 			$('#taxonInput').attr('placeholder','Input observed species');
 		}
 		
@@ -477,6 +478,7 @@ google.maps.event.addDomListener(window, 'load', googleAutocomplete);
 			$("#mapHolder").empty();
 		}
 		
+		
 		/** Get results from form */
 		function getResults() {
 			
@@ -486,12 +488,20 @@ google.maps.event.addDomListener(window, 'load', googleAutocomplete);
 		if(locstr !== undefined && locstr.length>0) {
 			
 		var locarr = locstr.split(' ');
-				
-		if (( locarr[ 0 ] == 'Latitude:') && (locarr[ 2 ] == 'Longitude:') || window.userX != null && window.userY != null) { 
-			
-		if(window.userX != null && window.userY != null) {
-			$('#locationInput')[ 0 ].value ="Latitude: "+window.userY+", Longitude: "+window.userX;
+		
+		var latIndex = locstr.indexOf('(lat: ');
+		var longIndex = locstr.indexOf(' long: ');
+
+		if (( latIndex != -1) && ( longIndex != -1)) {
+			window.userX = parseFloat( locstr.substring(longIndex + 6, longIndex + 13));
+			window.userY = parseFloat( locstr.substring(latIndex + 6, latIndex + 13));
 		}
+				
+	if (( locarr[ 0 ] == 'Latitude:') && (locarr[ 2 ] == 'Longitude:') || window.userX != null && window.userY != null) { 
+			
+		/*if(latIndex == -1 && window.userX != null && window.userY != null) {
+			$('#locationInput')[ 0 ].value ="Latitude: "+window.userY+", Longitude: "+window.userX;
+		}*/
 		
 			var loc = "";
 
@@ -659,6 +669,14 @@ google.maps.event.addDomListener(window, 'load', googleAutocomplete);
 					userY = null;
 				}
 				
+				var latIndex = locstr.indexOf('(lat: ');
+				var longIndex = locstr.indexOf(' long: ');
+
+				if (( latIndex != -1) && ( longIndex != -1)) {
+					window.userX = parseFloat( locstr.substring(longIndex + 6, longIndex + 13));
+					window.userY = parseFloat( locstr.substring(latIndex + 6, latIndex + 13));
+				}
+						
 				taxId = $.parseJSON(data);
 			
 				//console.log(taxId);
