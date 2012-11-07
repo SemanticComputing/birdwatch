@@ -218,7 +218,6 @@
 		var species_eng = [];
 		var species_fin = [];
 		var species_uri = [];
-		//var species_names = [];
 
 		var d = new Date();
 		var year = d.getFullYear();
@@ -230,6 +229,7 @@
 
 		var lang;
 
+		var misIDs = [];
 		var tax;
 		var taxId;
 		var taxName;
@@ -240,41 +240,9 @@
 
 		var width = $("#mainDiv").width();
 
-
-
-		// Set language to finnish
+		// Default language is finnish
 		langFi();
 		
-		/** Class containing species names for all languages and species URI */
-		/*function SpeciesNames(fin, eng, lat, taxon_uri)
-		{
-			var name_fin = fin;
-			var name_eng = eng;
-			var name_lat = lat;
-			var uri = taxon_uri;
-			
-			this.getFin = function()
-			{
-				return name_fin;
-			}
-			
-			this.getEng = function()
-			{
-				return name_eng;
-			}
-
-			this.getLat = function()
-			{
-				return name_lat;
-			}
-
-			this.getURI = function()
-			{
-				return uri;
-			}
-		}*/
-		
-
 		/** Get all taxon-names */
 		$.ajax({
 			url: "relay.php",
@@ -287,17 +255,12 @@
 				var obj = $.parseJSON(data);
 
 				for (x in obj.results.bindings) {
-					//var species_obj = new SpeciesNames( obj.results.bindings[ x ].label_fi.value, obj.results.bindings[ x ].label_en.value, obj.results.bindings[ x ].label_sci.value, obj.results.bindings[ x ].resource0.value );
-					//species_names.push( species_obj );
 					species_fin.push( obj.results.bindings[ x ].label_fi.value );
 					species_eng.push( obj.results.bindings[ x ].label_en.value );
-					species_lat.push( obj.results.bindings[ x ].label_sci.value );
+					species_lat.push( obj.results.bindings[ x ].label_sci.value.toLowerCase() );
 					species_uri.push( obj.results.bindings[ x ].resource0.value );
 				}
-				//console.log( species_names );
-				//console.log( species_names[0].getFin() );
-
-				// Change language to finnish again to update taxon names to autocompletion
+				// Change language to finnish again to update taxon names for species autocompletion
 				langFi();
 			},
 			error: function () {
@@ -328,7 +291,22 @@
 				maximumAge: 60000
 			});
 		}
+		
+		/*
+		// Assign enter key for taxonInput-field
+		$("#taxonInput").keyup(function (e) {
+			if (e.keyCode == 13) {
+				getResults();
+			}
+		});
 
+		// Assign enter key for locationInput-field
+		$("#locationInput").keyup(function (e) {
+			if (e.keyCode == 13) {
+				getResults();
+			}
+		});
+		*/
 
 		google.maps.event.addDomListener(window, 'load', googleAutocomplete);
 
@@ -402,7 +380,7 @@
 			lang = 'fi';
 			$("#taxonInput").autocomplete({
 				minLength: 2,
-				source: species_fin.concat(species_lat.sort())
+				source: species_fin.concat([].concat(species_lat).sort())
 			});
 
 			//$('#select-choice-1')[ 0 ].value = '-';
@@ -421,7 +399,7 @@
 			lang = 'en';
 			$("#taxonInput").autocomplete({
 				minLength: 2,
-				source: species_eng.sort().concat(species_lat.sort())
+				source: [].concat(species_eng).sort().concat(species_lat).sort()
 			});
 
 			$.getScript("jquery-ui/js/jquery.ui.datepicker-en-GB.js", function () {});
@@ -452,6 +430,303 @@
 		}
 
 
+		function getMisIds( uri ) {
+
+			/** create SPARQL-query for retrieving misidentifications */
+
+			var sparqlQuery;
+
+			sparqlQuery = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " +
+				"SELECT ?resource ?label ?common ?origcommon WHERE { " +
+				"<" + uri + "> envirofi:hasCommonMisidentification ?misid . <" + uri + "> hh:general ?origcommon . ?resource hh:general ?common . " +
+				"?resource envirofi:hasCommonMisidentification ?misid . " +
+				"?resource taxmeon:hasVernacularName ?vern . ?vern rdfs:label ?label . " +
+				"FILTER ( ?resource != <" + uri + "> ) . FILTER (lang(?label) = \"" + lang + "\") }";
+
+			/** get propable misidentifications	*/
+			$.ajax({
+				url: "relay_JSON.php",
+				//dataType: 'jsonp',
+				data: {
+					url: sparql_url + encodeURIComponent(sparqlQuery)
+				},
+				success: function (data) {
+					var obj = $.parseJSON(data);
+					//console.log(data);				
+					var r = document.getElementById("resultHolder");
+					var misid_str = '';
+
+
+					if (obj.results.hasOwnProperty('result')) {
+						if (!obj.results.result.hasOwnProperty('binding')) misid_str += speciesLinks(tax, false, obj.results.result[0].binding[3].literal === 'true', null) + '<br />';
+						else misid_str += speciesLinks(tax, false, obj.results.result.binding[3].literal === 'true', null) + '<br />';
+					}
+
+					if (obj.results.hasOwnProperty('result')) {
+						if (obj.results.result.length > 1) {
+							//console.log(obj.results.result.length);
+							if (lang == 'fi') misid_str += "Varo sekoittamasta lajeihin: <br />";
+							else if (lang == 'en') misid_str += "Common misidentifications: <br />";
+							for (x in obj.results.result) {
+								misIDs.push(obj.results.result[x].binding[0].uri);
+								misid_str += speciesLinks(obj.results.result[x].binding[1].literal, true, obj.results.result[x].binding[2].literal === 'true', obj.results.result[x].binding[0].uri);
+								//misid_str += speciesLinks( obj.results.result[ x ].binding[ 1 ].literal, true, true );
+							}
+						} else {
+							if (lang == 'fi') misid_str += "Varo sekoittamasta lajiin: ";
+							else if (lang == 'en') misid_str += "Common misidentification: ";
+							misIDs.push(obj.results.result.binding[0].uri);
+							misid_str += speciesLinks(obj.results.result.binding[1].literal, true, obj.results.result.binding[2].literal === 'true', obj.results.result.binding[0].uri);
+							//misid_str += speciesLinks( obj.results.result.binding[ 1 ].literal, true, true );
+						}
+					} else {
+						misid_str += speciesLinks(tax, false, true, null) + '<br />';
+						if (lang == 'fi') misid_str += "Ei helposti sekoitettavissa muihin lajeihin";
+						else if (lang == 'en') misid_str += "No common misidentifications";
+					}
+
+					if (misid_str.length > 1) r.innerHTML = misid_str;
+
+				}
+			});
+
+			var r = document.getElementById("resultHolder2");
+			r.innerHTML = '';
+			
+		}
+
+
+		/** Create 'Send' button */
+		function createSendButton(googled, color) {
+			var butt = '';
+
+			butt += '<a data-inline="true" data-role="button" target="_new" href="tiira/index.php?laji=' + encodeURIComponent(tax) + '&pvm=' + encodeURIComponent(date + '.' + month + '.' + year) + '&lat=' + encodeURIComponent(userY) + '&lon=' + encodeURIComponent(userX);
+			if (googled == true) butt += '&paikka=' + encodeURIComponent(locstr);
+			butt += '"';
+
+			if (color == 'red') {
+				if (lang == 'en') butt += ' title="Observing this species is unlikely"';
+				else butt += ' title="Lajin havaitseminen epätodennäköistä"';
+				butt += ' data-theme="f">';
+			} else if (color == 'green') {
+				if (lang == 'en') butt += ' title="Observing species is likely"';
+				else butt += ' title="Lajin havaitseminen todennäköistä"';
+				butt += ' data-theme="g">';
+			} else {
+				if (lang == 'en') butt += ' title="Observing species is possible"';
+				else butt += ' title="Lajin havaitseminen mahdollista"';
+				butt += ' data-theme="e">';
+			}
+
+			butt += '<span class="ui-btn-text transl" data-fi="Lähetä" data-en="Send">';
+			if (lang == 'en') butt += 'Send';
+			else butt += 'Lähetä';
+			butt += '</span></a>';
+
+			$('#buttHolder').html('<div id="innerButt" class="rightAlign"></div>');
+
+			$('#innerButt').html(butt).trigger('create');
+			//$('#innerButt').page();
+		}
+
+
+		/** Capitalize all separate words */
+		function capitalizeWords(strSentence) {
+			var s = strSentence.replace(/\s[a-z]/g, convertToUpper);
+			s = s[0].toUpperCase() + s.substring(1);
+
+			return s;
+
+			function convertToUpper() {
+				return arguments[0].toUpperCase();
+			}
+		}
+
+		/** Capitalize first letter */
+		function capitalizeFirst(strSentence) {
+			return strSentence[0].toUpperCase() + strSentence.substring(1);
+		}
+
+		/** Generate misid-text */
+		function speciesLinks(speciesName, bLink, bLuontoPortti, uri) {
+			var thisStr = '';
+
+			if (bLink) thisStr = '<a href href="#" onClick="changeTaxon(\'' + speciesName + '\');">';
+			else thisStr = '<b id="speciesNameHolder">';
+
+			if (lang == 'en') thisStr += capitalizeWords(speciesName);
+			else thisStr += speciesName;
+
+			if (bLink) thisStr += '</a>';
+			else thisStr += '</b>';
+
+			var speciesLP = speciesName.replace(/ä/g, "a").replace(/ö/g, "o")
+			if (lang == 'fi') speciesLP = speciesLP.replace('isokuovi', 'kuovi');
+			else {
+				speciesLP = speciesLP.split('/')[0];
+				speciesLP = speciesLP.replace('northern pintail', 'pintail').replace('common teal', 'teal');
+				speciesLP = speciesLP.replace('barn swallow', 'swallow').replace('collared sand martin', 'sand martin');
+				speciesLP = speciesLP.replace('eurasian ', '').replace('european ', '');
+				speciesLP = speciesLP.replace('common linnet', 'linnet');
+				speciesLP = speciesLP.replace(/ /g, '-');
+			}
+
+			var validTaxon = false;
+
+			//console.log( speciesName );
+
+			if (lang == 'en' && ($.inArray(speciesName, species_eng) != -1)) {
+				validTaxon = true;
+			}
+
+			if (lang == 'fi' && ($.inArray(speciesName, species_fin) != -1)) {
+				validTaxon = true;
+			}
+
+			if (validTaxon) {
+				thisStr += " &nbsp;&nbsp; <a href=\"http://" + lang + ".wikipedia.org/wiki/" + capitalizeWords(speciesName.split('/')[0]) + "\" target=\"_blank\" title=\"Wikipedia\"><img src=\"w.ico\" /></a>";
+				//if (lang == 'fi')
+
+				if (bLuontoPortti) thisStr += " &nbsp;&nbsp; <a id=\"lp_" + speciesName + "\" href=\"http://www.luontoportti.com/suomi/" + lang + "/linnut/" + speciesLP + "\" target=\"_blank\" title=\"Luontoportti\"><img src=\"lp.ico\" /></a>";
+				//$('#lp_' + speciesName).hide();
+
+				if (lang == 'fi') thisStr += " &nbsp;&nbsp; <a href=\"http://atlas3.lintuatlas.fi/tulokset/laji/" + speciesName + "\" target=\"_blank\" title=\"Lintuatlas\"><img src=\"atlas.ico\" /></a>";
+
+			}
+
+
+			thisStr += "<br />";
+
+			return thisStr;
+		}
+
+
+		function getObservationsMonthAgo(start_d_string, end_d_string) {
+			//console.log("Getting observations month ago ...");
+
+			var xlongmin = (parseFloat(window.userX) - range);
+			var xlongmax = (parseFloat(window.userX) + range);
+
+			var ylatmin = (parseFloat(window.userY) - range);
+			var ylatmax = (parseFloat(window.userY) + range);
+
+			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " +
+				"SELECT ?date ?lat ?long { ?ha hh:scientific_name <" + taxId + "> . ?ha rdf:type hh:Observation . ?ha hh:calendar_date ?date . " +
+				"?ha geo:lat ?lat . ?ha geo:long ?long . " +
+				"FILTER ( xsd:float(?long) > " + xlongmin + " && xsd:float(?long) < " + xlongmax + " && xsd:float(?lat) > " + ylatmin + " && xsd:float(?lat) < " + ylatmax + ") . " +
+				"FILTER ((?date >= '" + start_d_string + "'^^xsd:date) && (?date <= '" + end_d_string + "'^^xsd:date))" +
+				"}";
+
+			$.ajax({
+				url: "relay.php",
+				data: {
+					url: tiira_url + encodeURIComponent(sparqlQuery) + "&output=json"
+				},
+				success: function (data) {
+					var obj = $.parseJSON(data);
+
+					if (obj.results.bindings.length > 0) {
+						if (lang == "fi") {
+							$("#observationHolder").append("Alueella tehty " + obj.results.bindings.length + " havaintoa lajista " + tax + " tähän vuodenaikaan (+- 2 viikkoa)");
+							//	$("#speciesNameHolder").append("havaintoa tähän vuodenaikaan (+-2 viikkoa)");
+						} else {
+							$("#observationHolder").append(obj.results.bindings.length + " " + tax + " sightings in the area in this time of year (+- 2 weeks)");
+							//	$("#speciesNameHolder").append(" sightings in the area in this time of year (+- weeks)");						
+						}
+
+						var list = [];
+
+						for (var i = 0; i < obj.results.bindings.length; i++) {
+							list.push(obj.results.bindings[i]["lat"].value + "," + obj.results.bindings[i]["long"].value);
+							//console.log(list[i]);
+						}
+
+					} else {
+
+						if (lang == "fi") {
+							$("#observationHolder").append("Alueella ei ole tehty yhtään havaintoa lajista " + tax + " tähän vuodenaikaan (+-2 viikkoa)");
+							//	$("#speciesNameHolder").append("havaintoa tähän vuodenaikaan (+-2 viikkoa)");
+						} else {
+							$("#observationHolder").prepend("There has been no " + tax + " sightings in the area in this time of year (+- 2 weeks)");
+							//	$("#speciesNameHolder").append(" sightings in the area in this time of year (+- weeks)");						
+						}
+
+
+					}
+
+					//createSendButton();
+					var width = $("#mainDiv").width();
+					$("#mapHolder").html(getStaticMapHtml(parseFloat(window.userY), parseFloat(window.userX), width, list));
+					$("#map").trigger('expand');
+
+
+				}
+			});
+
+		}
+
+		function updateHitStatus(odds) {
+
+			if (lang == 'fi') {
+				r.innerHTML = "Todennäköisyys lajin havaitsemiselle: " + (100 * odds).toFixed(1) + "%";
+				r.innerHTML += "<br /><i>Koordinaatit: " + userY + ", " + userX + "</i>";
+			} else {
+				r.innerHTML = "Probability for observing species in the area: " + (100 * odds).toFixed(1) + "%";
+				r.innerHTML += "<br /><i>Coordinates: " + userY + ", " + userX + "</i>";
+			}
+
+		}
+
+
+		/** get propability for seeing the species here and now */
+		function getProbs(taxId) {
+			var param = "http://demo.seco.tkk.fi/json?" + 'lat=' + encodeURIComponent(userY) + '&lng=' + encodeURIComponent(userX) + '&d=' + selectedDate.getDOY() + '&uri=' + encodeURIComponent(taxId);
+			if (biotope.length > 2) param += "&biotope=" + biotope;
+
+			$.ajax({
+				url: "relay.php",
+				//dataType: 'jsonp',
+				data: {
+					url: param
+				},
+				error: function () {
+					if (userX !== null && userY != null) {
+						createSendButton(false, 'yellow');
+					}
+				},
+				success: function (data) {
+
+					try {
+						var obj = data; //data;
+					} catch (e) {
+						var obj = [-1];
+					}
+					var hit = false;
+					var coords;
+
+					//console.log( obj[ 0 ] );
+
+					if (userX !== null && userY != null) {
+						if ((obj[0] >= 0) && (obj[0] < 2)) updateHitStatus(obj[0]);
+						createSendButton(false, obj[1]);
+					}
+
+				}
+			});
+		}
+		
+				
+		/** A bad species name was given */
+		function badSpeciesName() {
+			resetResults();
+			if (tax.length < 1) {
+				if (lang == "en") $("#speciesHolder").append(tax + "Please write species name");
+				else $("#speciesHolder").append(tax + "Kirjoita ensin lintulajin nimi");
+			} else if (lang == "en") $("#speciesHolder").append(tax + " is not found from english bird names");
+			else $("#speciesHolder").append(tax + " ei löydy suomalaisista lintujen nimistä");			
+		}
+
+
 		/** Get results from form */
 		function getResults() {
 
@@ -462,6 +737,7 @@
 
 				var locarr = locstr.split(' ');
 
+				/** Parse format: Place (lat: yy, long: xx) */
 				var latIndex = locstr.indexOf('(lat: ');
 				var longIndex = locstr.indexOf(' long: ');
 
@@ -469,491 +745,73 @@
 					window.userX = parseFloat(locstr.substring(longIndex + 6, longIndex + 13));
 					window.userY = parseFloat(locstr.substring(latIndex + 6, latIndex + 13));
 				}
-
-				if ((locarr[0] == 'Latitude:') && (locarr[2] == 'Longitude:') || window.userX != null && window.userY != null) {
-
-					/*if(latIndex == -1 && window.userX != null && window.userY != null) {
-	$('#locationInput')[ 0 ].value ="Latitude: "+window.userY+", Longitude: "+window.userX;
-}*/
-
-					var loc = "";
-
-					var misIDs = [];
-					resetResults();
-
-					document.getElementById("infoHolder").innerHTML = "";
-
-					tax = document.getElementById("taxonInput").value.toLowerCase();
-					var latinName = false;
-
-					//var biotope = document.getElementById("select-choice-1").value.toLowerCase();
-
-					if ($.inArray(tax, species_lat) != -1) {
-						latinName = true;
-					}
-
-					if (document.getElementById("locLat") !== null) {
-						loc = "Lat: " + document.getElementById("locLat").value +
-							" Lon: " + document.getElementById("locLon").value;
-					} else {
-						loc = document.getElementById("locationInput").value;
-					}
-
-					var dateArr = document.getElementById("datepicker").value.split('.');
-
-					date = dateArr[0];
-					month = dateArr[1];
-					year = '2012';
-					selectedDate = new Date(year, parseInt(month) - 1, date);
-
-					if (date.toString().length == 1) date = "0" + date;
-					if (month.toString().length == 1) month = "0" + month;
-
-					/** Calculate start and end dates for calculated observations */
-					var md = new Date(year, parseInt(month) - 1, parseInt(date) - 14);
-					var mdday = md.getDate();
-					var mdmonth = (md.getMonth() + 1);
-
-					var endd = new Date(year, parseInt(month) - 1, parseInt(date) + 14);
-					var endday = endd.getDate();
-					var endmonth = (endd.getMonth() + 1);
-
-					if (mdmonth < 10) mdmonth = "0" + mdmonth
-					if (endmonth < 10) endmonth = "0" + endmonth
-					var startDateString = "2012-" + mdmonth + "-" + mdday;
-					var endDateString = "2012-" + endmonth + "-" + endday;
-
-					/** Capitalize all separate words */
-					function capitalizeWords(strSentence) {
-						var s = strSentence.replace(/\s[a-z]/g, convertToUpper);
-						s = s[0].toUpperCase() + s.substring(1);
-
-						return s;
-
-						function convertToUpper() {
-							return arguments[0].toUpperCase();
-						}
-					}
-
-					/** Capitalize first letter */
-					function capitalizeFirst(strSentence) {
-						return strSentence[0].toUpperCase() + strSentence.substring(1);
-					}
-
-					/** Generate misid-text */
-					function speciesLinks(speciesName, bLink, bLuontoPortti, uri) {
-						var thisStr = '';
-
-						if (bLink) thisStr = '<a href href="#" onClick="changeTaxon(\'' + speciesName + '\');">';
-						else thisStr = '<b id="speciesNameHolder">';
-
-						if (lang == 'en') thisStr += capitalizeWords(speciesName);
-						else thisStr += speciesName;
-
-						if (bLink) thisStr += '</a>';
-						else thisStr += '</b>';
-
-						var speciesLP = speciesName.replace(/ä/g, "a").replace(/ö/g, "o")
-						if (lang == 'fi') speciesLP = speciesLP.replace('isokuovi', 'kuovi');
-						else {
-							speciesLP = speciesLP.split('/')[0];
-							speciesLP = speciesLP.replace('northern pintail', 'pintail').replace('common teal', 'teal');
-							speciesLP = speciesLP.replace('barn swallow', 'swallow').replace('collared sand martin', 'sand martin');
-							speciesLP = speciesLP.replace('eurasian ', '').replace('european ', '');
-							speciesLP = speciesLP.replace(/ /g, '-');
-						}
-
-						var validTaxon = false;
-
-						//console.log( speciesName );
-
-						if (lang == 'en' && ($.inArray(speciesName, species_eng) != -1)) {
-							validTaxon = true;
-						}
-
-						if (lang == 'fi' && ($.inArray(speciesName, species_fin) != -1)) {
-							validTaxon = true;
-						}
-
-						if (validTaxon) {
-							thisStr += " &nbsp;&nbsp; <a href=\"http://" + lang + ".wikipedia.org/wiki/" + capitalizeWords(speciesName.split('/')[0]) + "\" target=\"_blank\" title=\"Wikipedia\"><img src=\"w.ico\" /></a>";
-							//if (lang == 'fi')
-
-							if (bLuontoPortti) thisStr += " &nbsp;&nbsp; <a id=\"lp_" + speciesName + "\" href=\"http://www.luontoportti.com/suomi/" + lang + "/linnut/" + speciesLP + "\" target=\"_blank\" title=\"Luontoportti\"><img src=\"lp.ico\" /></a>";
-							//$('#lp_' + speciesName).hide();
-
-							if (lang == 'fi') thisStr += " &nbsp;&nbsp; <a href=\"http://atlas3.lintuatlas.fi/tulokset/laji/" + speciesName + "\" target=\"_blank\" title=\"Lintuatlas\"><img src=\"atlas.ico\" /></a>";
-
-						}
-
-
-						thisStr += "<br />";
-
-						return thisStr;
-					}
-
-					/** create SPARQL-query for taxon-id */
-
-					var sparqlQuery = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> ";
-
-					if (!latinName) {
-						sparqlQuery += "SELECT ?resource WHERE { ?resource taxmeon:hasVernacularName ?vern . ?vern rdfs:label \"" + tax;
-						sparqlQuery += "\"@" + lang;
-						sparqlQuery += " .}";
-					} else {
-						sparqlQuery += "SELECT ?resource WHERE { ?resource taxmeon:completeTaxonName \"" + capitalizeFirst(tax);
-						sparqlQuery += "\" .  }";
-					}
-
-					//console.log( sparqlQuery );
-
-					/** get taxon-id */
-					$.ajax({
-						url: "relay_JSON.php",
-						//dataType: 'jsonp',
-						data: {
-							url: sparql_url + encodeURIComponent(sparqlQuery)
-						},
-						success: function (data) {
-
-							//console.log(data);
-
-							var locstr = document.getElementById("locationInput").value;
-							var locarr = locstr.split(' ');
-
-							if ((locarr[0] == 'Latitude:') && (locarr[2] == 'Longitude:')) {
-								userX = parseFloat(locarr[3]);
-								userY = parseFloat(locarr[1]);
-							} else {
-								userX = null;
-								userY = null;
-							}
-
-							var latIndex = locstr.indexOf('(lat: ');
-							var longIndex = locstr.indexOf(' long: ');
-
-							if ((latIndex != -1) && (longIndex != -1)) {
-								window.userX = parseFloat(locstr.substring(longIndex + 6, longIndex + 13));
-								window.userY = parseFloat(locstr.substring(latIndex + 6, latIndex + 13));
-							}
-
-							taxId = $.parseJSON(data);
-
-							//console.log(taxId);
-
-							if (taxId.results.result !== undefined) {
-
-								taxId = taxId.results.result.binding.uri;
-								//console.log(taxId);
-
-								if (taxId.length > 0) {
-									if (userX !== null && userY != null) {
-										//getProbs( taxId );
-
-										getMisIds();
-										createSendButton(false);
-
-										$("#chartholder").css({
-											"visibility": "visible"
-										});
-
-									} else {
-
-										// TODO what if this happens?
-
-									}
-								}
-							} else {
-								resetResults();
-								if (tax.length < 1) {
-									if (lang == "en") $("#speciesHolder").append(tax + "Please, white name of a bird");
-									else $("#speciesHolder").append(tax + "Kirjoita ensin linnun nimi");
-								} else if (lang == "en") $("#speciesHolder").append(tax + " is not a official birdname in english");
-								else $("#speciesHolder").append(tax + " ei ole virallinen suomalainen linnun nimi");
-							}
-
-							function getMisIds() {
-
-								/** create SPARQL-query for retrieving misidentifications */
-
-								var sparqlQuery;
-
-								if (!latinName) {
-									sparqlQuery = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " +
-										"SELECT ?resource ?label ?common ?origcommon WHERE { " +
-										"?resource0 envirofi:hasCommonMisidentification ?misid . ?resource0 hh:general ?origcommon . " +
-										"?resource hh:general ?common . ?resource envirofi:hasCommonMisidentification ?misid . " +
-										"?vern0 taxmeon:inverse_of_hasVernacularName ?resource0 . ?vern0 rdfs:label \"" + tax + "\"@" + lang + " . " +
-										"?resource taxmeon:hasVernacularName ?vern . ?vern rdfs:label ?label . " +
-										"FILTER ( ?resource0 != ?resource ) . FILTER (lang(?label) = \"" + lang + "\") }";
-								} else {
-									sparqlQuery = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " +
-										"SELECT ?resource ?label ?common ?origcommon WHERE { " +
-										"?resource0 envirofi:hasCommonMisidentification ?misid . ?resource0 hh:general ?origcommon . ?resource hh:general ?common . " +
-										"?resource envirofi:hasCommonMisidentification ?misid .?resource0 taxmeon:completeTaxonName \"" + capitalizeFirst(tax) + "\" . " +
-										"?resource taxmeon:hasVernacularName ?vern . ?vern rdfs:label ?label . " +
-										"FILTER ( ?resource0 != ?resource ) . FILTER (lang(?label) = \"" + lang + "\") }";
-								}
-
-								/** get propable misidentifications	*/
-								$.ajax({
-									url: "relay_JSON.php",
-									//dataType: 'jsonp',
-									data: {
-										url: sparql_url + encodeURIComponent(sparqlQuery)
-									},
-									success: function (data) {
-										var obj = $.parseJSON(data);
-										//console.log(data);				
-										var r = document.getElementById("resultHolder");
-										var misid_str = '';
-
-
-										if (obj.results.hasOwnProperty('result')) {
-											if (!obj.results.result.hasOwnProperty('binding')) misid_str += speciesLinks(tax, false, obj.results.result[0].binding[3].literal === 'true', null) + '<br />';
-											else misid_str += speciesLinks(tax, false, obj.results.result.binding[3].literal === 'true', null) + '<br />';
-										}
-
-										if (obj.results.hasOwnProperty('result')) {
-											if (obj.results.result.length > 1) {
-												//console.log(obj.results.result.length);
-												if (lang == 'fi') misid_str += "Varo sekoittamasta lajeihin: <br />";
-												else if (lang == 'en') misid_str += "Common misidentifications: <br />";
-												for (x in obj.results.result) {
-													misIDs.push(obj.results.result[x].binding[0].uri);
-													misid_str += speciesLinks(obj.results.result[x].binding[1].literal, true, obj.results.result[x].binding[2].literal === 'true', obj.results.result[x].binding[0].uri);
-													//misid_str += speciesLinks( obj.results.result[ x ].binding[ 1 ].literal, true, true );
-												}
-											} else {
-												if (lang == 'fi') misid_str += "Varo sekoittamasta lajiin: ";
-												else if (lang == 'en') misid_str += "Common misidentification: ";
-												misIDs.push(obj.results.result.binding[0].uri);
-												misid_str += speciesLinks(obj.results.result.binding[1].literal, true, obj.results.result.binding[2].literal === 'true', obj.results.result.binding[0].uri);
-												//misid_str += speciesLinks( obj.results.result.binding[ 1 ].literal, true, true );
-											}
-										} else {
-											misid_str += speciesLinks(tax, false, true, null) + '<br />';
-											if (lang == 'fi') misid_str += "Ei helposti sekoitettavissa muihin lajeihin";
-											else if (lang == 'en') misid_str += "No common misidentifications";
-										}
-
-										if (misid_str.length > 1) r.innerHTML = misid_str;
-
-
-
-										getObservationsMonthAgo();
-
-
-									}
-								});
-
-								var r = document.getElementById("resultHolder2");
-								r.innerHTML = '';
-
-							}
-
-							function getObservationsMonthAgo() {
-								//console.log("Getting observations month ago ...");
-
-								var xlongmin = (parseFloat(window.userX) - range);
-								var xlongmax = (parseFloat(window.userX) + range);
-
-								var ylatmin = (parseFloat(window.userY) - range);
-								var ylatmax = (parseFloat(window.userY) + range);
-
-
-								//console.log("Current misids: "+misIDs.length);
-
-								sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " +
-									"SELECT ?date ?lat ?long { ?ha hh:scientific_name <" + taxId + "> . ?ha rdf:type hh:Observation . ?ha hh:calendar_date ?date . " +
-									"?ha geo:lat ?lat . ?ha geo:long ?long . " +
-									"FILTER ( xsd:float(?long) > " + xlongmin + " && xsd:float(?long) < " + xlongmax + " && xsd:float(?lat) > " + ylatmin + " && xsd:float(?lat) < " + ylatmax + ") . " +
-									"FILTER ((?date >= '" + startDateString + "'^^xsd:date) && (?date <= '" + endDateString + "'^^xsd:date))" +
-									"}";
-
-								//console.log("Current misids: "+misIDs.length);
-
-								//console.log(sparqlQuery);
-
-								$.ajax({
-									url: "relay.php",
-									//dataType: 'jsonp',
-									data: {
-										url: tiira_url + encodeURIComponent(sparqlQuery) + "&output=json"
-									},
-									success: function (data) {
-										var obj = $.parseJSON(data);
-
-										//console.log(obj);
-
-										if (obj.results.bindings.length > 0) {
-											if (lang == "fi") {
-												$("#observationHolder").append("Alueella tehty " + obj.results.bindings.length + " havaintoa lajista " + tax + " tähän vuodenaikaan (+- 2 viikkoa)");
-												//	$("#speciesNameHolder").append("havaintoa tähän vuodenaikaan (+-2 viikkoa)");
-											} else {
-												$("#observationHolder").append(obj.results.bindings.length + " " + tax + " sightings in the area in this time of year (+- 2 weeks)");
-												//	$("#speciesNameHolder").append(" sightings in the area in this time of year (+- weeks)");						
-											}
-
-											var list = [];
-
-											for (var i = 0; i < obj.results.bindings.length; i++) {
-												list.push(obj.results.bindings[i]["lat"].value + "," + obj.results.bindings[i]["long"].value);
-												//console.log(list[i]);
-											}
-
-										} else {
-
-											if (lang == "fi") {
-												$("#observationHolder").append("Alueella ei ole tehty yhtään havaintoa lajista " + tax + " tähän vuodenaikaan (+-2 viikkoa)");
-												//	$("#speciesNameHolder").append("havaintoa tähän vuodenaikaan (+-2 viikkoa)");
-											} else {
-												$("#observationHolder").prepend("There has been no " + tax + " sightings in the area in this time of year (+- 2 weeks)");
-												//	$("#speciesNameHolder").append(" sightings in the area in this time of year (+- weeks)");						
-											}
-
-
-										}
-
-										//createSendButton();
-										var width = $("#mainDiv").width();
-										$("#mapHolder").html(getStaticMapHtml(parseFloat(window.userY), parseFloat(window.userX), width, list));
-										$("#map").trigger('expand');
-
-
-									}
-								});
-
-							}
-
-							/** Get location from Google Geocoding API */
-							function googleLoc(place) {
-								$.ajax({
-									url: "relay.php",
-									//dataType: 'jsonp',
-									data: {
-										url: "http://maps.googleapis.com/maps/api/geocode/json?address=" + encodeURIComponent(place + ",finland") +
-											"&sensor=false"
-									},
-									success: function (data) {
-										var objGeocode = $.parseJSON(data);
-
-										if (objGeocode.status == "OK") {
-											window.userX = objGeocode.results[0].geometry.location.lng.toFixed(4);
-											window.userY = objGeocode.results[0].geometry.location.lat.toFixed(4);
-										}
-
-										//console.log("long: "+window.userX +" lat: "+window.userY);
-
-										//getProbs( window.taxId );
-										getMisIds();
-										$("#chartholder").css({
-											"visibility": "visible"
-										});
-
-
-										/*updateHitStatus( odds );*/
-										createSendButton(true);
-									}
-								});
-							}
-
-							/** Create 'Send' and 'Back' buttons */
-							function createSendButton(googled, color) {
-								var butt = '';
-								/*butt += '<a data-inline="true" data-role="button" onClick="window.location.hash = \'#\'" href="#"';
-			butt += '" data-theme="c"><span class="ui-btn-text transl" data-fi="Takaisin" data-en="Back">';
-			if (lang == 'en')
-				butt += 'Back';
-			else
-				butt += 'Takaisin';
-			butt +='</span></a>';*/
-
-								//butt += "<img src=\"img/" + color + ".png\" />";
-
-								butt += '<a data-inline="true" data-role="button" target="_new" href="tiira/index.php?laji=' + encodeURIComponent(tax) + '&pvm=' + encodeURIComponent(date + '.' + month + '.' + year) + '&lat=' + encodeURIComponent(userY) + '&lon=' + encodeURIComponent(userX);
-								if (googled == true) butt += '&paikka=' + encodeURIComponent(locstr);
-								butt += '"';
-
-								if (color == 'red') {
-									if (lang == 'en') butt += ' title="Observing this species is unlikely"';
-									else butt += ' title="Lajin havaitseminen epätodennäköistä"';
-									butt += ' data-theme="f">';
-								} else if (color == 'green') {
-									if (lang == 'en') butt += ' title="Observing species is likely"';
-									else butt += ' title="Lajin havaitseminen todennäköistä"';
-									butt += ' data-theme="g">';
-								} else {
-									if (lang == 'en') butt += ' title="Observing species is possible"';
-									else butt += ' title="Lajin havaitseminen mahdollista"';
-									butt += ' data-theme="e">';
-								}
-
-								//console.log( butt );
-
-								butt += '<span class="ui-btn-text transl" data-fi="Lähetä" data-en="Send">';
-								if (lang == 'en') butt += 'Send';
-								else butt += 'Lähetä';
-								butt += '</span></a>';
-
-								$('#buttHolder').html('<div id="innerButt" class="rightAlign"></div>');
-
-								$('#innerButt').html(butt).trigger('create');
-								//$('#innerButt').page();
-							}
-
-							function updateHitStatus(odds) {
-
-								if (lang == 'fi') {
-									r.innerHTML = "Todennäköisyys lajin havaitsemiselle: " + (100 * odds).toFixed(1) + "%";
-									r.innerHTML += "<br /><i>Koordinaatit: " + userY + ", " + userX + "</i>";
-								} else {
-									r.innerHTML = "Probability for observing species in the area: " + (100 * odds).toFixed(1) + "%";
-									r.innerHTML += "<br /><i>Coordinates: " + userY + ", " + userX + "</i>";
-								}
-
-							}
-
-
-							/** get propability for seeing the species here and now */
-							function getProbs(taxId) {
-								var param = "http://demo.seco.tkk.fi/json?" + 'lat=' + encodeURIComponent(userY) + '&lng=' + encodeURIComponent(userX) + '&d=' + selectedDate.getDOY() + '&uri=' + encodeURIComponent(taxId);
-								if (biotope.length > 2) param += "&biotope=" + biotope;
-
-								$.ajax({
-									url: "relay.php",
-									//dataType: 'jsonp',
-									data: {
-										url: param
-									},
-									error: function () {
-										if (userX !== null && userY != null) {
-											createSendButton(false, 'yellow');
-										}
-									},
-									success: function (data) {
-
-										try {
-											var obj = data; //data;
-										} catch (e) {
-											var obj = [-1];
-										}
-										var hit = false;
-										var coords;
-
-										//console.log( obj[ 0 ] );
-
-										if (userX !== null && userY != null) {
-											if ((obj[0] >= 0) && (obj[0] < 2)) updateHitStatus(obj[0]);
-											createSendButton(false, obj[1]);
-										}
-
-									}
-								});
-							}
-						}
+				else if ((locarr[0] == 'Latitude:') && (locarr[2] == 'Longitude:')) {
+					window.userX = parseFloat(locarr[3]);
+					window.userY = parseFloat(locarr[1]);
+				} else {
+					window.userX = null;
+					window.userY = null;
+				}
+
+
+				/** If we don't get any coords, it's bye-bye */
+				if (window.userX == null && window.userY == null) {
+					return false;
+				}
+
+				resetResults();
+
+				document.getElementById("infoHolder").innerHTML = "";
+
+				tax = document.getElementById("taxonInput").value.toLowerCase();
+
+				if ($.inArray(tax, species_fin) != -1) {
+					taxId = species_uri[ species_fin.indexOf( tax )];
+				}
+				else if ($.inArray(tax, species_lat) != -1) {
+					taxId = species_uri[ species_lat.indexOf( tax )];
+				}
+				else if ($.inArray(tax, species_eng) != -1) {
+					taxId = species_uri[ species_eng.indexOf( tax )];
+				} else
+				{
+					badSpeciesName();
+					return false;
+				}
+				
+				var dateArr = document.getElementById("datepicker").value.split('.');
+
+				date = dateArr[0];
+				month = dateArr[1];
+				year = '2012';
+				selectedDate = new Date(year, parseInt(month) - 1, date);
+
+				if (date.toString().length == 1) date = "0" + date;
+				if (month.toString().length == 1) month = "0" + month;
+
+				/** Calculate start and end dates for calculated observations */
+				var md = new Date(year, parseInt(month) - 1, parseInt(date) - 14);
+				var mdday = md.getDate();
+				var mdmonth = (md.getMonth() + 1);
+
+				var endd = new Date(year, parseInt(month) - 1, parseInt(date) + 14);
+				var endday = endd.getDate();
+				var endmonth = (endd.getMonth() + 1);
+
+				if (mdmonth < 10) mdmonth = "0" + mdmonth
+				if (endmonth < 10) endmonth = "0" + endmonth
+				var startDateString = "2012-" + mdmonth + "-" + mdday;
+				var endDateString = "2012-" + endmonth + "-" + endday;
+
+				if (window.userX != null && window.userY != null) {
+
+					getMisIds( taxId );
+					getObservationsMonthAgo(startDateString, endDateString);
+					createSendButton(false);
+
+					$("#chartholder").css({
+						"visibility": "visible"
 					});
-
 				}
 			}
 		}
