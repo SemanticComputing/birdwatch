@@ -225,7 +225,7 @@
 		var date = d.getDate();
 
 		var sparql_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Pulsa4/sparql?query=";
-		var tiira_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Tiira3/sparql?query=";
+		var tiira_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Tiira4/sparql?query=";
 
 		var lang;
 
@@ -241,14 +241,23 @@
 		var width = $("#mainDiv").width();
 
 		// Default language is finnish
-		langFi();
+		langFi(true);
 		
 		/** Get all taxon-names */
 		$.ajax({
 			url: "relay.php",
 			data: {
 				url: sparql_url + encodeURIComponent("PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> PREFIX taxonomic-ranks: <http://www.yso.fi/onto/taxonomic-ranks/>" +
-					"SELECT DISTINCT ?label_fi ?label_en ?label_sci ?resource0 ?label_en WHERE { ?resource_fi rdf:type taxmeon:VernacularName . ?resource_en rdf:type taxmeon:VernacularName . ?resource_fi taxmeon:inverse_of_hasVernacularName ?resource0 . ?resource_en taxmeon:inverse_of_hasVernacularName ?resource0 . ?resource0 rdf:type taxonomic-ranks:Species . ?resource0 taxmeon:completeTaxonName ?label_sci . ?resource_fi rdfs:label ?label_fi . ?resource_en rdfs:label ?label_en . FILTER (lang(?label_fi) = \"fi\" && lang(?label_en) = \"en\") } " +
+					"SELECT ?label_fi ?label_en ?label_sci ?resource0 WHERE " + 
+					"{ ?resource_fi rdf:type taxmeon:VernacularName . " +
+					"?resource_en rdf:type taxmeon:VernacularName . " + 
+					"?resource_fi taxmeon:inverse_of_hasVernacularName ?resource0 . " +
+					"?resource_en taxmeon:inverse_of_hasVernacularName ?resource0 . " + 
+					"?resource0 rdf:type taxonomic-ranks:Species . " + 
+					"?resource_fi rdfs:label ?label_fi . " + 
+					"?resource_en rdfs:label ?label_en . " +
+					"OPTIONAL { ?resource0 taxmeon:completeTaxonName ?label_sci } . " + 
+					"FILTER (lang(?label_fi) = \"fi\" && lang(?label_en) = \"en\") } " +
 					"ORDER BY ?label_fi ") + "&output=json"
 			},
 			success: function (data) {
@@ -257,11 +266,15 @@
 				for (x in obj.results.bindings) {
 					species_fin.push( obj.results.bindings[ x ].label_fi.value );
 					species_eng.push( obj.results.bindings[ x ].label_en.value );
-					species_lat.push( obj.results.bindings[ x ].label_sci.value.toLowerCase() );
+					if (obj.results.bindings[ x ].hasOwnProperty('label_sci')) {
+						species_lat.push( obj.results.bindings[ x ].label_sci.value.toLowerCase() );
+					} else {
+						species_lat.push( '' );
+					}
 					species_uri.push( obj.results.bindings[ x ].resource0.value );
 				}
 				// Change language to finnish again to update taxon names for species autocompletion
-				langFi();
+				langFi(false);
 			},
 			error: function () {
 				console.log("Error getting taxon names");
@@ -326,7 +339,7 @@
 			resetResults();
 			$('#taxonInput')[0].value = "";
 			if (lang == "fi") langEn();
-			else langFi();
+			else langFi(true);
 		});
 
 
@@ -373,7 +386,7 @@
 		}
 
 		/** Set language to finnish */
-		function langFi() {
+		function langFi( init_datepicker ) {
 			$('.transl').each(function () {
 				$(this).html($(this).data('fi'));
 			});
@@ -384,7 +397,9 @@
 			});
 
 			//$('#select-choice-1')[ 0 ].value = '-';
-			$.getScript("jquery-ui/js/jquery.ui.datepicker-fi.js", function () {});
+			if (init_datepicker) {
+				$.getScript("jquery-ui/js/jquery.ui.datepicker-fi.js", function () {});
+			}
 
 			$('#locationInput').attr('placeholder', 'Anna paikannimi tai osoite');
 			$('#taxonInput').attr('placeholder', 'Syötä havaittu laji');
@@ -399,7 +414,7 @@
 			lang = 'en';
 			$("#taxonInput").autocomplete({
 				minLength: 2,
-				source: [].concat(species_eng).sort().concat(species_lat).sort()
+				source: [].concat(species_eng).sort().concat(species_lat.sort())
 			});
 
 			$.getScript("jquery-ui/js/jquery.ui.datepicker-en-GB.js", function () {});
@@ -445,10 +460,10 @@
 
 			/** get propable misidentifications	*/
 			$.ajax({
-				url: "relay_JSON.php",
+				url: "relay.php",
 				//dataType: 'jsonp',
 				data: {
-					url: sparql_url + encodeURIComponent(sparqlQuery)
+					url: sparql_url + encodeURIComponent(sparqlQuery) + "&output=json"
 				},
 				success: function (data) {
 					var obj = $.parseJSON(data);
