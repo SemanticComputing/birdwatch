@@ -467,47 +467,38 @@
 				},
 				success: function (data) {
 					var obj = $.parseJSON(data);
-					//console.log(data);				
 					var r = document.getElementById("resultHolder");
 					var misid_str = '';
 
-
-					if (obj.results.hasOwnProperty('result')) {
-						if (!obj.results.result.hasOwnProperty('binding')) misid_str += speciesLinks(tax, false, obj.results.result[0].binding[3].literal === 'true', null) + '<br />';
-						else misid_str += speciesLinks(tax, false, obj.results.result.binding[3].literal === 'true', null) + '<br />';
-					}
-
-					if (obj.results.hasOwnProperty('result')) {
-						if (obj.results.result.length > 1) {
-							//console.log(obj.results.result.length);
-							if (lang == 'fi') misid_str += "Varo sekoittamasta lajeihin: <br />";
-							else if (lang == 'en') misid_str += "Common misidentifications: <br />";
-							for (x in obj.results.result) {
-								misIDs.push(obj.results.result[x].binding[0].uri);
-								misid_str += speciesLinks(obj.results.result[x].binding[1].literal, true, obj.results.result[x].binding[2].literal === 'true', obj.results.result[x].binding[0].uri);
-								//misid_str += speciesLinks( obj.results.result[ x ].binding[ 1 ].literal, true, true );
-							}
+					if (obj.results.bindings.length > 0) {
+						misid_str += speciesLinks(tax, false, obj.results.bindings[0].origcommon.value === 'true', null) + '<br />';
+						if (obj.results.bindings.length > 1) {
+							if (lang == 'fi') 
+								misid_str += "Varo sekoittamasta lajeihin: <br />";
+							else if (lang == 'en') 
+								misid_str += "Common misidentifications: <br />";
 						} else {
-							if (lang == 'fi') misid_str += "Varo sekoittamasta lajiin: ";
-							else if (lang == 'en') misid_str += "Common misidentification: ";
-							misIDs.push(obj.results.result.binding[0].uri);
-							misid_str += speciesLinks(obj.results.result.binding[1].literal, true, obj.results.result.binding[2].literal === 'true', obj.results.result.binding[0].uri);
-							//misid_str += speciesLinks( obj.results.result.binding[ 1 ].literal, true, true );
+							if (lang == 'fi') 
+								misid_str += "Varo sekoittamasta lajiin: ";
+							else if (lang == 'en') 
+								misid_str += "Common misidentification: ";
 						}
+							for (x in obj.results.bindings) {
+								misIDs.push(obj.results.bindings[x].resource.value);
+								misid_str += speciesLinks(obj.results.bindings[x].label.value, true, obj.results.bindings[x].literal === 'true', obj.results.bindings[x].resource.value);
+							}
 					} else {
 						misid_str += speciesLinks(tax, false, true, null) + '<br />';
 						if (lang == 'fi') misid_str += "Ei helposti sekoitettavissa muihin lajeihin";
 						else if (lang == 'en') misid_str += "No common misidentifications";
 					}
 
-					if (misid_str.length > 1) r.innerHTML = misid_str;
+					if (misid_str.length > 1) 
+						r.innerHTML = misid_str;
 
 				}
 			});
 
-			var r = document.getElementById("resultHolder2");
-			r.innerHTML = '';
-			
 		}
 
 
@@ -733,7 +724,6 @@
 				
 		/** A bad species name was given */
 		function badSpeciesName() {
-			resetResults();
 			if (tax.length < 1) {
 				if (lang == "en") $("#speciesHolder").append(tax + "Please write species name");
 				else $("#speciesHolder").append(tax + "Kirjoita ensin lintulajin nimi");
@@ -746,88 +736,93 @@
 		function getResults() {
 
 			var locstr = $('#locationInput')[0].value;
+			var locarr = locstr.split(' ');
 
+			tax = document.getElementById("taxonInput").value.toLowerCase();
 
-			if (locstr !== undefined && locstr.length > 0) {
+			/** Must have something in species name */
+			if (tax == undefined || tax.length == 0) {
+				badSpeciesName();
+				return false;
+			}
 
-				var locarr = locstr.split(' ');
+			/** Must have something in location */
+			if (locstr == undefined || locstr.length == 0) {
+				return false;
+			}
 
-				/** Parse format: Place (lat: yy, long: xx) */
-				var latIndex = locstr.indexOf('(lat: ');
-				var longIndex = locstr.indexOf(' long: ');
+			/** Parse format: Place (lat: yy, long: xx) */
+			var latIndex = locstr.indexOf('(lat: ');
+			var longIndex = locstr.indexOf(' long: ');
 
-				if ((latIndex != -1) && (longIndex != -1)) {
-					window.userX = parseFloat(locstr.substring(longIndex + 6, longIndex + 13));
-					window.userY = parseFloat(locstr.substring(latIndex + 6, latIndex + 13));
-				}
-				else if ((locarr[0] == 'Latitude:') && (locarr[2] == 'Longitude:')) {
-					window.userX = parseFloat(locarr[3]);
-					window.userY = parseFloat(locarr[1]);
-				} else {
-					window.userX = null;
-					window.userY = null;
-				}
+			if ((latIndex != -1) && (longIndex != -1)) {
+				window.userX = parseFloat(locstr.substring(longIndex + 6, longIndex + 13));
+				window.userY = parseFloat(locstr.substring(latIndex + 6, latIndex + 13));
+			}
+			else if ((locarr[0] == 'Latitude:') && (locarr[2] == 'Longitude:')) {
+				window.userX = parseFloat(locarr[3]);
+				window.userY = parseFloat(locarr[1]);
+			} /*else {
+				window.userX = null;
+				window.userY = null;
+			}*/
 
+			/** If we don't get any coords, it's bye-bye */
+			if (window.userX == null && window.userY == null) {
+				return false;
+			}
 
-				/** If we don't get any coords, it's bye-bye */
-				if (window.userX == null && window.userY == null) {
-					return false;
-				}
+			resetResults();
 
-				resetResults();
+			document.getElementById("infoHolder").innerHTML = "";
 
-				document.getElementById("infoHolder").innerHTML = "";
+			if ($.inArray(tax, species_fin) != -1) {
+				taxId = species_uri[ species_fin.indexOf( tax )];
+			}
+			else if ($.inArray(tax, species_lat) != -1) {
+				taxId = species_uri[ species_lat.indexOf( tax )];
+			}
+			else if ($.inArray(tax, species_eng) != -1) {
+				taxId = species_uri[ species_eng.indexOf( tax )];
+			} else
+			{
+				badSpeciesName();
+				return false;
+			}
+			
+			var dateArr = document.getElementById("datepicker").value.split('.');
 
-				tax = document.getElementById("taxonInput").value.toLowerCase();
+			date = dateArr[0];
+			month = dateArr[1];
+			year = '2012';
+			selectedDate = new Date(year, parseInt(month) - 1, date);
 
-				if ($.inArray(tax, species_fin) != -1) {
-					taxId = species_uri[ species_fin.indexOf( tax )];
-				}
-				else if ($.inArray(tax, species_lat) != -1) {
-					taxId = species_uri[ species_lat.indexOf( tax )];
-				}
-				else if ($.inArray(tax, species_eng) != -1) {
-					taxId = species_uri[ species_eng.indexOf( tax )];
-				} else
-				{
-					badSpeciesName();
-					return false;
-				}
-				
-				var dateArr = document.getElementById("datepicker").value.split('.');
+			if (date.toString().length == 1) date = "0" + date;
+			if (month.toString().length == 1) month = "0" + month;
 
-				date = dateArr[0];
-				month = dateArr[1];
-				year = '2012';
-				selectedDate = new Date(year, parseInt(month) - 1, date);
+			/** Calculate start and end dates for calculated observations */
+			var md = new Date(year, parseInt(month) - 1, parseInt(date) - 14);
+			var mdday = md.getDate();
+			var mdmonth = (md.getMonth() + 1);
 
-				if (date.toString().length == 1) date = "0" + date;
-				if (month.toString().length == 1) month = "0" + month;
+			var endd = new Date(year, parseInt(month) - 1, parseInt(date) + 14);
+			var endday = endd.getDate();
+			var endmonth = (endd.getMonth() + 1);
 
-				/** Calculate start and end dates for calculated observations */
-				var md = new Date(year, parseInt(month) - 1, parseInt(date) - 14);
-				var mdday = md.getDate();
-				var mdmonth = (md.getMonth() + 1);
+			if (mdmonth < 10) mdmonth = "0" + mdmonth
+			if (endmonth < 10) endmonth = "0" + endmonth
+			var startDateString = "2012-" + mdmonth + "-" + mdday;
+			var endDateString = "2012-" + endmonth + "-" + endday;
 
-				var endd = new Date(year, parseInt(month) - 1, parseInt(date) + 14);
-				var endday = endd.getDate();
-				var endmonth = (endd.getMonth() + 1);
+			if (window.userX != null && window.userY != null) {
 
-				if (mdmonth < 10) mdmonth = "0" + mdmonth
-				if (endmonth < 10) endmonth = "0" + endmonth
-				var startDateString = "2012-" + mdmonth + "-" + mdday;
-				var endDateString = "2012-" + endmonth + "-" + endday;
+				getMisIds( taxId );
+				getObservationsMonthAgo(startDateString, endDateString);
+				createSendButton(false);
 
-				if (window.userX != null && window.userY != null) {
-
-					getMisIds( taxId );
-					getObservationsMonthAgo(startDateString, endDateString);
-					createSendButton(false);
-
-					$("#chartholder").css({
-						"visibility": "visible"
-					});
-				}
+				$("#chartholder").css({
+					"visibility": "visible"
+				});
 			}
 		}
 
@@ -1084,7 +1079,6 @@
 		}
 
 
-
 		/** Geolocation stuff */
 
 		function getStaticMapHtml(x, y, w, list) {
@@ -1112,8 +1106,10 @@
 		function displayError() {
 			//  $('#locationInput').attr('placeholder','Write placename (Town, placename) or address');
 			if ($('#locationInput')[0].value.length == 0) {
-				if (lang == 'fi') $('#locationInput')[0].value = 'Paikan hakeminen epäonnistui';
-				else $('#locationInput')[0].value = 'Unable to get current location';
+				if (lang == 'fi') 
+					$('#locationInput')[0].value = 'Paikan hakeminen epäonnistui';
+				else 
+					$('#locationInput')[0].value = 'Unable to get current location';
 			}
 		}
 
@@ -1133,13 +1129,11 @@
 
 				var place = autocomplete.getPlace();
 				if (!place.geometry) {
-					// TODO Can this happen?     
+					// Can this happen? 
 				} else {
 					window.userX = place.geometry.location.lng().toFixed(4);
 					window.userY = place.geometry.location.lat().toFixed(4);
 					input.value = input.value + " (lat: " + window.userY + ", long: " + window.userX + ")";
-					// console.log("LAT: "+window.userX+": LON: "+window.userY);
-					//console.log( place.address_components );
 				}
 			});
 		}
@@ -1150,7 +1144,6 @@
 		}
 
 	</script>
-	<!--<script src="jquery-ui/js/jquery.ui.datepicker-fi.js"></script>-->
 </div>		
 </body>
 </html>
