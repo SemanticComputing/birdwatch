@@ -797,9 +797,6 @@
 			year = '2012';
 			selectedDate = new Date(year, parseInt(month) - 1, date);
 
-			if (date.toString().length == 1) date = "0" + date;
-			if (month.toString().length == 1) month = "0" + month;
-
 			/** Calculate start and end dates for calculated observations */
 			var md = new Date(year, parseInt(month) - 1, parseInt(date) - 14);
 			var mdday = md.getDate();
@@ -811,6 +808,10 @@
 
 			if (mdmonth < 10) mdmonth = "0" + mdmonth
 			if (endmonth < 10) endmonth = "0" + endmonth
+			
+			if (mdday < 10) mdday = "0" + mdday
+			if (endday < 10) endday = "0" + endday
+
 			var startDateString = "2012-" + mdmonth + "-" + mdday;
 			var endDateString = "2012-" + endmonth + "-" + endday;
 
