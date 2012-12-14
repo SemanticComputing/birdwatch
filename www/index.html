@@ -224,8 +224,7 @@
 		var month = (d.getMonth() + 1);
 		var date = d.getDate();
 
-		var sparql_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Pulsa4/sparql?query=";
-		var tiira_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Tiira4/sparql?query=";
+		var sparql_url = "http://mt08014.seco.hut.fi:9080/smetana/service/data/Tiira6/sparql?query=";
 
 		var lang;
 
@@ -442,6 +441,7 @@
 			$("#chart_div2").empty();
 			$("#map").trigger('collapse');
 			$("#mapHolder").empty();
+			$("#buttHolder").empty();
 		}
 
 
@@ -510,19 +510,9 @@
 			if (googled == true) butt += '&paikka=' + encodeURIComponent(locstr);
 			butt += '"';
 
-			if (color == 'red') {
-				if (lang == 'en') butt += ' title="Observing this species is unlikely"';
-				else butt += ' title="Lajin havaitseminen epätodennäköistä"';
-				butt += ' data-theme="f">';
-			} else if (color == 'green') {
-				if (lang == 'en') butt += ' title="Observing species is likely"';
-				else butt += ' title="Lajin havaitseminen todennäköistä"';
-				butt += ' data-theme="g">';
-			} else {
-				if (lang == 'en') butt += ' title="Observing species is possible"';
-				else butt += ' title="Lajin havaitseminen mahdollista"';
-				butt += ' data-theme="e">';
-			}
+			if (lang == 'en') butt += ' title="Proceed to observation sending"';
+			else butt += ' title="Siirry havainnon lähettämiseen"';
+			butt += ' data-theme="e">';
 
 			butt += '<span class="ui-btn-text transl" data-fi="Lähetä" data-en="Send">';
 			if (lang == 'en') butt += 'Send';
@@ -607,7 +597,7 @@
 		}
 
 
-		function getObservationsMonthAgo(start_d_string, end_d_string) {
+		function getObservationsMonthAgo(start_d, end_d) {
 			//console.log("Getting observations month ago ...");
 
 			var xlongmin = (parseFloat(window.userX) - range);
@@ -616,17 +606,23 @@
 			var ylatmin = (parseFloat(window.userY) - range);
 			var ylatmax = (parseFloat(window.userY) + range);
 
-			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> " +
-				"SELECT ?date ?lat ?long { ?ha hh:scientific_name <" + taxId + "> . ?ha rdf:type hh:Observation . ?ha hh:calendar_date ?date . " +
+			sparqlQuery = "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#> PREFIX fn: <http://www.w3.org/2005/xpath-functions#> PREFIX xsd: <http://www.w3.org/2001/XMLSchema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX hh: <http://www.hatikka.fi/havainnot/> PREFIX envirofi: <http://www.yso.fi/onto/envirofi/> PREFIX taxmeon: <http://www.yso.fi/onto/taxmeon/> PREFIX owl-time: <http://www.w3.org/TR/2006/WD-owl-time-20060927/> " +
+				"SELECT ?date ?lat ?long { ?ha hh:scientific_name <" + taxId + "> . ?ha rdf:type hh:Observation . ?ha owl-time:dayOfYear ?date . " +
 				"?ha geo:lat ?lat . ?ha geo:long ?long . " +
-				"FILTER ( xsd:float(?long) > " + xlongmin + " && xsd:float(?long) < " + xlongmax + " && xsd:float(?lat) > " + ylatmin + " && xsd:float(?lat) < " + ylatmax + ") . " +
-				"FILTER ((?date >= '" + start_d_string + "'^^xsd:date) && (?date <= '" + end_d_string + "'^^xsd:date))" +
-				"}";
-
+				"FILTER ( xsd:float(?long) > " + xlongmin + " && xsd:float(?long) < " + xlongmax + " && xsd:float(?lat) > " + ylatmin + " && xsd:float(?lat) < " + ylatmax + ") . ";
+			
+			if (start_d < end_d) {
+				sparqlQuery += "FILTER ((xsd:integer(?date) >= " + start_d + ") && (xsd:integer(?date) <= " + end_d + "))" +
+								"}";
+			} else {
+				sparqlQuery += "FILTER ((xsd:integer(?date) >= " + start_d + ") || (xsd:integer(?date) <= " + end_d + "))" +
+								"}";
+			}
+			
 			$.ajax({
 				url: "relay.php",
 				data: {
-					url: tiira_url + encodeURIComponent(sparqlQuery) + "&output=json"
+					url: sparql_url + encodeURIComponent(sparqlQuery) + "&output=json"
 				},
 				success: function (data) {
 					var obj = $.parseJSON(data);
@@ -798,27 +794,13 @@
 			selectedDate = new Date(year, parseInt(month) - 1, date);
 
 			/** Calculate start and end dates for calculated observations */
-			var md = new Date(year, parseInt(month) - 1, parseInt(date) - 14);
-			var mdday = md.getDate();
-			var mdmonth = (md.getMonth() + 1);
-
+			var startd = new Date(year, parseInt(month) - 1, parseInt(date) - 14);
 			var endd = new Date(year, parseInt(month) - 1, parseInt(date) + 14);
-			var endday = endd.getDate();
-			var endmonth = (endd.getMonth() + 1);
-
-			if (mdmonth < 10) mdmonth = "0" + mdmonth
-			if (endmonth < 10) endmonth = "0" + endmonth
-			
-			if (mdday < 10) mdday = "0" + mdday
-			if (endday < 10) endday = "0" + endday
-
-			var startDateString = "2012-" + mdmonth + "-" + mdday;
-			var endDateString = "2012-" + endmonth + "-" + endday;
 
 			if (window.userX != null && window.userY != null) {
 
 				getMisIds( taxId );
-				getObservationsMonthAgo(startDateString, endDateString);
+				getObservationsMonthAgo(startd.getDOY(), endd.getDOY());
 				createSendButton(false);
 
 				$("#chartholder").css({
@@ -849,7 +831,7 @@
 				url: "relay.php",
 				//dataType: 'jsonp',
 				data: {
-					url: tiira_url + encodeURIComponent(sparqlQuery) + "&output=json"
+					url: sparql_url + encodeURIComponent(sparqlQuery) + "&output=json"
 				},
 				success: function (data) {
 					var obj = $.parseJSON(data);
@@ -959,7 +941,7 @@
 				url: "relay.php",
 				//dataType: 'jsonp',
 				data: {
-					url: tiira_url + encodeURIComponent(sparqlQuery) + "&output=json"
+					url: sparql_url + encodeURIComponent(sparqlQuery) + "&output=json"
 				},
 				success: function (data) {
 					var obj = $.parseJSON(data);
@@ -1141,7 +1123,7 @@
 
 		Date.prototype.getDOY = function () {
 			var onejan = new Date(this.getFullYear(), 0, 1);
-			return Math.ceil((this - onejan) / 86400000);
+			return Math.ceil((this - onejan) / 86400000) + 1;
 		}
 
 	</script>
